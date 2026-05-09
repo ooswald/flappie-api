@@ -6,18 +6,14 @@ import { Flappie, FlappieApiError } from "../lib/flappie.js";
 import { configPath } from "../lib/config.js";
 
 function fail(err) {
-  if (err instanceof FlappieApiError) {
-    console.error(`error: ${err.message}`);
-  } else {
-    console.error(err.stack || String(err));
-  }
+  if (err instanceof FlappieApiError) console.error(`error: ${err.message}`);
+  else console.error(err.stack || String(err));
   process.exit(1);
 }
 
 async function prompt(q, { hidden = false } = {}) {
   const rl = createInterface({ input, output });
   if (hidden) {
-    // suppress echo
     const orig = output.write;
     output.write = (chunk, ...rest) => {
       if (typeof chunk === "string" && chunk !== q) return true;
@@ -38,21 +34,21 @@ async function prompt(q, { hidden = false } = {}) {
 }
 
 function resolveDevice(devices, ref) {
+  if (!devices.length) throw new Error("No devices on this account.");
   if (!ref) {
     if (devices.length === 1) return devices[0];
     throw new Error(`More than one device. Specify by id or name: ${devices.map(d => d.name ?? d.id).join(", ")}`);
   }
   const r = ref.toLowerCase();
-  const match = devices.find((d) =>
+  const m = devices.find((d) =>
     String(d.id).toLowerCase() === r ||
-    (d.serial && String(d.serial).toLowerCase() === r) ||
     (d.name && d.name.toLowerCase().includes(r))
   );
-  if (!match) throw new Error(`Device not found: ${ref}. Available: ${devices.map(d => d.name ?? d.id).join(", ")}`);
-  return match;
+  if (!m) throw new Error(`Device not found: ${ref}. Available: ${devices.map(d => d.name ?? d.id).join(", ")}`);
+  return m;
 }
 
-program.name("flappie").description("Control Flappie cat doors via the cloud API").version("0.1.0");
+program.name("flappie").description("Read-only CLI for Flappie cat doors via the cloud API").version("0.1.0");
 
 program
   .command("login")
@@ -80,87 +76,83 @@ program
   .command("whoami")
   .description("Show the currently logged-in user")
   .action(async () => {
-    try {
-      const f = new Flappie();
-      const u = await f.getUser();
-      console.log(JSON.stringify(u, null, 2));
-    } catch (e) { fail(e); }
+    try { console.log(JSON.stringify(await new Flappie().getUser(), null, 2)); } catch (e) { fail(e); }
   });
 
 program
   .command("devices")
-  .description("List all devices")
+  .description("List all devices with current state")
   .action(async () => {
     try {
       const f = new Flappie();
-      const list = await f.listDevices();
-      const devices = Array.isArray(list) ? list : list.data ?? list.items ?? list.devices ?? [];
-      if (!devices.length) {
-        console.log("(no devices)");
-        return;
-      }
+      const [devices, dash] = await Promise.all([f.listDevices(), f.dashboard()]);
+      const ops = (dash?.operational_status ?? []).reduce((m, o) => (m[o.device_id] = o, m), {});
+      if (!devices.length) { console.log("(no devices)"); return; }
       for (const d of devices) {
-        const name = d.name ?? d.serial ?? d.id;
-        const policy = d.door_policy ?? d.doorPolicy ?? "?";
-        const online = d.is_online ?? d.online ?? d.status ?? "?";
-        console.log(`  ${String(d.id).padEnd(36)}  ${String(name).padEnd(20)}  policy=${policy}  online=${online}`);
+        const o = ops[d.id] ?? {};
+        let status;
+        try {
+          const s = await f.getDeviceStatus(d.id);
+          status = s.state ?? "?";
+          if (s.lock_until) status += ` (until ${s.lock_until})`;
+        } catch { status = "?"; }
+        const ai = o.prey_detection_user_preference ? "ai-on" : "ai-off";
+        const sysLock = o.prey_detection_system_lock ? " sys-locked" : "";
+        console.log(`  ${String(d.id).padEnd(20)}  ${String(d.name ?? "").padEnd(15)}  ${d.model ?? ""}  fw=${d.firmware_version ?? "?"}  ${status}  ${ai}${sysLock}`);
       }
     } catch (e) { fail(e); }
   });
 
 program
   .command("status [device]")
-  .description("Show device status (full payload)")
+  .description("Show full status (state, lock_until, etc) of a device")
   .action(async (ref) => {
     try {
       const f = new Flappie();
-      const list = await f.listDevices();
-      const devices = Array.isArray(list) ? list : list.data ?? list.items ?? list.devices ?? [];
+      const devices = await f.listDevices();
       const d = resolveDevice(devices, ref);
-      const full = await f.getDevice(d.id);
-      console.log(JSON.stringify(full, null, 2));
+      const [info, status] = await Promise.all([
+        f.getDeviceInformation(d.id),
+        f.getDeviceStatus(d.id),
+      ]);
+      console.log(JSON.stringify({ device: d, information: info, status }, null, 2));
     } catch (e) { fail(e); }
   });
 
-async function applyPolicy(ref, policy) {
-  const f = new Flappie();
-  const list = await f.listDevices();
-  const devices = Array.isArray(list) ? list : list.data ?? list.items ?? list.devices ?? [];
-  const d = resolveDevice(devices, ref);
-  const res = await f.setDoorPolicy(d.id, policy);
-  console.log(`${policy.padEnd(20)} → ${d.name ?? d.id}`);
-  return res;
-}
-
 program
-  .command("open [device]")
-  .description("Force the door to always-open")
-  .action(async (ref) => { try { await applyPolicy(ref, "always_open"); } catch (e) { fail(e); } });
-
-program
-  .command("close [device]")
-  .description("Force the door to always-locked")
-  .action(async (ref) => { try { await applyPolicy(ref, "always_locked"); } catch (e) { fail(e); } });
-
-program
-  .command("auto [device]")
-  .description("Switch back to AI prey-detection mode")
-  .action(async (ref) => { try { await applyPolicy(ref, "prey_detection"); } catch (e) { fail(e); } });
-
-program
-  .command("policy <policy> [device]")
-  .description("Set arbitrary door policy (e.g. always_open, always_locked, prey_detection)")
-  .action(async (policy, ref) => { try { await applyPolicy(ref, policy); } catch (e) { fail(e); } });
+  .command("dashboard")
+  .description("Show dashboard (recent prey, system lock state, etc)")
+  .action(async () => {
+    try { console.log(JSON.stringify(await new Flappie().dashboard(), null, 2)); } catch (e) { fail(e); }
+  });
 
 program
   .command("cats")
   .description("List cats")
   .action(async () => {
+    try { console.log(JSON.stringify(await new Flappie().listCats(), null, 2)); } catch (e) { fail(e); }
+  });
+
+program
+  .command("stats <kind>")
+  .description("Stats: 'hunting' or 'prey' grouped by period")
+  .option("-g, --group-by <period>", "hour | day | week | month", "day")
+  .option("-s, --start <YYYY-MM-DD>", "start date")
+  .option("-e, --end <YYYY-MM-DD>", "end date")
+  .action(async (kind, opts) => {
     try {
       const f = new Flappie();
-      const list = await f.listCats();
-      console.log(JSON.stringify(list, null, 2));
+      const args = { groupBy: opts.groupBy, startDate: opts.start, endDate: opts.end };
+      const data = kind === "prey" ? await f.preyStats(args) : await f.huntingStats(args);
+      console.log(JSON.stringify(data, null, 2));
     } catch (e) { fail(e); }
+  });
+
+program
+  .command("news")
+  .description("List news items")
+  .action(async () => {
+    try { console.log(JSON.stringify(await new Flappie().news(), null, 2)); } catch (e) { fail(e); }
   });
 
 program
