@@ -1,0 +1,8 @@
+node_modules/
+*.xapk
+*.apk
+xapk-extract/
+arm64-extract/
+main-extract/
+decompiled/
+*.log

@@ -1,0 +1,12 @@
+{
+  "name": "flappie-cli",
+  "version": "0.1.0",
+  "description": "CLI to control Flappie cat doors via the cloud API",
+  "type": "module",
+  "bin": {
+    "flappie": "./bin/flappie.js"
+  },
+  "dependencies": {
+    "commander": "^13.0.0"
+  }
+}
