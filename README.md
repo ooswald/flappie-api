@@ -1,12 +1,12 @@
 # flappie-cli
 
-Read-only CLI for Flappie cat doors via the cloud API at `app.flappiedoors.com`.
+CLI for Flappie cat doors via the cloud API at `app.flappiedoors.com`.
 
 > Reverse-engineered from the official Flappie Android app v1.0.11 (Flutter, AOT-compiled). The vendor has not yet published a public API. There is **no documented local control** - the cat door talks only to the cloud, the CLI does too. When Flappie publishes an official API, swap the endpoints.
 
 ## Status
 
-**Read-only as of v0.1.** Lock/unlock/policy actions exist in the app but the action endpoints are constructed at runtime in the Dart binary and aren't extractable via static string analysis. To add write commands we need to capture live HTTPS traffic from the official app (Android emulator + mitmproxy + reFlutter, or charles-proxy on iOS with the unpinned profile). Reading state, stats, dashboard, cats - all works.
+**v0.2 - reads + writes.** Action endpoints recovered by static analysis of the Dart AOT snapshot via [blutter](https://github.com/worawit/blutter). Lock/unlock works through `PATCH /api/v1/devices/<id>/settings`; the `open_status` field accepts an enum (`OPEN`, `CLOSED`, `OPEN_IN`, `OPEN_OUT`).
 
 ## Install
 
@@ -28,7 +28,20 @@ flappie stats hunting              # hunting stats grouped by day
 flappie stats prey -g hour -s 2026-05-01
 flappie news                       # news items in the app
 flappie whoami                     # current user
+
+flappie settings                   # current door policy + ai/buttons settings
+flappie lock                       # close in both directions
+flappie unlock                     # open in both directions
+flappie policy OPEN_IN             # one-way: only entry (keep cat inside)
+flappie policy OPEN_OUT            # one-way: only exit (keep cat outside)
+flappie ai on                      # enable prey-detection AI
+flappie buttons off                # disable physical buttons on the door
+flappie power-off-policy CLOSED    # what the door does when battery dies
+flappie set-name "Garden Door"     # rename the device
+flappie timeplans                  # list configured time plans
+
 flappie raw GET /api/v1/devices    # arbitrary endpoint
+flappie raw PATCH /api/v1/devices/<id>/settings -d '{"open_status":"CLOSED"}'
 flappie logout
 ```
 
@@ -61,10 +74,31 @@ GET    /api/v1/cats                              cat profiles
 GET    /api/v1/news/                             news items
 GET    /api/v1/statistics/hunting?group_by_period=...&start_date=...
 GET    /api/v1/statistics/prey?group_by_period=...&start_date=...
+GET    /api/v1/devices/<id>/settings             { open_status, power_off_open_status, buttons_enabled, prey_detection_user_preference, ... }
+GET    /api/v1/devices/<id>/timeplans            list of time plans
 
-# write/control endpoints not yet captured:
-POST/PATCH ?  /api/v1/devices/<id>/...           door lock/unlock, prey-detection toggle, time-plans
+PATCH  /api/v1/devices/<id>/settings             body: any subset of { open_status, power_off_open_status, buttons_enabled, prey_detection_user_preference }
+PATCH  /api/v1/devices/<id>/information          { name }
+POST   /api/v1/devices/<id>/timeplans            add a time plan
+PUT    /api/v1/devices/<id>/timeplans/<tpId>     edit a time plan
+DELETE /api/v1/devices/<id>/timeplans/<tpId>     remove a time plan
+PATCH  /api/v1/news/<id>/read                    mark notification read
+PATCH  /api/v1/news/read-all                     mark all read
+POST   /api/v1/users/fcm-token                   register FCM token (push)
+PATCH  /api/v1/users                             update profile (incl. ai-training preference)
+POST   /api/v1/cats                              add cat
+PUT    /api/v1/cats/<id>                         edit cat
+DELETE /api/v1/cats/<id>                         delete cat
 ```
+
+`open_status` and `power_off_open_status` accept the `DoorPolicy` enum:
+
+| value      | meaning                              |
+|------------|--------------------------------------|
+| `OPEN`     | open in both directions (= unlocked) |
+| `CLOSED`   | closed in both directions (= locked) |
+| `OPEN_IN`  | only inbound (keep cat inside)       |
+| `OPEN_OUT` | only outbound (keep cat outside)     |
 
 The `dashboard.operational_status[]` entry per device contains:
 
@@ -84,9 +118,9 @@ The `dashboard.operational_status[]` entry per device contains:
 
 ## Roadmap
 
-- v0.1 (current): read-only - state, dashboard, stats, cats
-- v0.2: write commands once the action endpoints are captured (lock, unlock, time plans, prey-detection toggle)
-- v0.3: webhook / cron-friendly poll mode for home-automation integration
+- v0.1: read-only - state, dashboard, stats, cats
+- v0.2 (current): write commands - lock/unlock, door policy, ai toggle, buttons, rename, time plans (read)
+- v0.3: time plan CRUD with a sane interactive editor; webhook / cron-friendly poll mode for home-automation
 
 ## Notes
 

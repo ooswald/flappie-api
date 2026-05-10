@@ -5,4 +5,5 @@ xapk-extract/
 arm64-extract/
 main-extract/
 decompiled/
+blutter-out/
 *.log

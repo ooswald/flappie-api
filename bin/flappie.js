@@ -48,7 +48,22 @@ function resolveDevice(devices, ref) {
   return m;
 }
 
-program.name("flappie").description("Read-only CLI for Flappie cat doors via the cloud API").version("0.1.0");
+const POLICIES = ["OPEN", "CLOSED", "OPEN_IN", "OPEN_OUT"];
+
+function parseBool(v) {
+  const s = String(v).toLowerCase();
+  if (["on", "true", "1", "yes"].includes(s)) return true;
+  if (["off", "false", "0", "no"].includes(s)) return false;
+  throw new Error(`expected on/off, got "${v}"`);
+}
+
+function normalizePolicy(p) {
+  const u = String(p).toUpperCase().replace(/-/g, "_");
+  if (!POLICIES.includes(u)) throw new Error(`policy must be one of ${POLICIES.join(", ")}, got "${p}"`);
+  return u;
+}
+
+program.name("flappie").description("CLI for Flappie cat doors via the cloud API").version("0.2.0");
 
 program
   .command("login")
@@ -153,6 +168,126 @@ program
   .description("List news items")
   .action(async () => {
     try { console.log(JSON.stringify(await new Flappie().news(), null, 2)); } catch (e) { fail(e); }
+  });
+
+program
+  .command("settings [device]")
+  .description("Show current device settings (door policy, ai, buttons, etc)")
+  .action(async (ref) => {
+    try {
+      const f = new Flappie();
+      const d = resolveDevice(await f.listDevices(), ref);
+      console.log(JSON.stringify(await f.getDeviceSettings(d.id), null, 2));
+    } catch (e) { fail(e); }
+  });
+
+function summarizeSettings(s) {
+  if (!s || typeof s !== "object") return "";
+  const parts = [];
+  if (s.open_status) parts.push(`open=${s.open_status}`);
+  if ("buttons_enabled" in s) parts.push(`buttons=${s.buttons_enabled ? "on" : "off"}`);
+  if ("prey_detection_user_preference" in s) parts.push(`ai=${s.prey_detection_user_preference ? "on" : "off"}`);
+  if (s.prey_detection_system_lock) parts.push("sys-locked");
+  return parts.join(" ");
+}
+
+program
+  .command("policy <policy> [device]")
+  .description(`Set door policy: ${POLICIES.join(" | ")} (lower-case + dashes also accepted)`)
+  .action(async (policy, ref) => {
+    try {
+      const open_status = normalizePolicy(policy);
+      const f = new Flappie();
+      const d = resolveDevice(await f.listDevices(), ref);
+      const updated = await f.patchDeviceSettings(d.id, { open_status });
+      console.log(`${d.name ?? d.id}: ${summarizeSettings(updated)}`);
+    } catch (e) { fail(e); }
+  });
+
+program
+  .command("lock [device]")
+  .description("Close door in both directions (alias for: policy CLOSED)")
+  .action(async (ref) => {
+    try {
+      const f = new Flappie();
+      const d = resolveDevice(await f.listDevices(), ref);
+      const updated = await f.patchDeviceSettings(d.id, { open_status: "CLOSED" });
+      console.log(`${d.name ?? d.id}: ${summarizeSettings(updated)}`);
+    } catch (e) { fail(e); }
+  });
+
+program
+  .command("unlock [device]")
+  .description("Open door in both directions (alias for: policy OPEN)")
+  .action(async (ref) => {
+    try {
+      const f = new Flappie();
+      const d = resolveDevice(await f.listDevices(), ref);
+      const updated = await f.patchDeviceSettings(d.id, { open_status: "OPEN" });
+      console.log(`${d.name ?? d.id}: ${summarizeSettings(updated)}`);
+    } catch (e) { fail(e); }
+  });
+
+program
+  .command("power-off-policy <policy> [device]")
+  .description(`Door policy when battery dies: ${POLICIES.join(" | ")}`)
+  .action(async (policy, ref) => {
+    try {
+      const power_off_open_status = normalizePolicy(policy);
+      const f = new Flappie();
+      const d = resolveDevice(await f.listDevices(), ref);
+      const updated = await f.patchDeviceSettings(d.id, { power_off_open_status });
+      console.log(`${d.name ?? d.id}: power_off_open_status=${updated?.power_off_open_status ?? power_off_open_status}`);
+    } catch (e) { fail(e); }
+  });
+
+program
+  .command("ai <state> [device]")
+  .description("Turn prey detection AI on/off")
+  .action(async (state, ref) => {
+    try {
+      const prey_detection_user_preference = parseBool(state);
+      const f = new Flappie();
+      const d = resolveDevice(await f.listDevices(), ref);
+      const updated = await f.patchDeviceSettings(d.id, { prey_detection_user_preference });
+      console.log(`${d.name ?? d.id}: ${summarizeSettings(updated)}`);
+    } catch (e) { fail(e); }
+  });
+
+program
+  .command("buttons <state> [device]")
+  .description("Enable/disable physical buttons on the door")
+  .action(async (state, ref) => {
+    try {
+      const buttons_enabled = parseBool(state);
+      const f = new Flappie();
+      const d = resolveDevice(await f.listDevices(), ref);
+      const updated = await f.patchDeviceSettings(d.id, { buttons_enabled });
+      console.log(`${d.name ?? d.id}: ${summarizeSettings(updated)}`);
+    } catch (e) { fail(e); }
+  });
+
+program
+  .command("set-name <name> [device]")
+  .description("Rename the device")
+  .action(async (name, ref) => {
+    try {
+      const f = new Flappie();
+      const d = resolveDevice(await f.listDevices(), ref);
+      await f.updateDeviceName(d.id, name);
+      console.log(`${d.id}: name -> ${name}`);
+    } catch (e) { fail(e); }
+  });
+
+program
+  .command("timeplans [device]")
+  .description("List time plans configured on the device")
+  .action(async (ref) => {
+    try {
+      const f = new Flappie();
+      const d = resolveDevice(await f.listDevices(), ref);
+      console.log(JSON.stringify(await f.getDeviceTimePlans(d.id), null, 2));
+    } catch (e) { fail(e); }
   });
 
 program
