@@ -7,7 +7,7 @@ info:
     `app.flappiedoors.com` that the Flappie cat-door mobile app uses.
 
     The vendor has not published an official spec; field names, types and
-    behaviour can change at any time. Pin a version of `flappie-sdk` if you
+    behaviour can change at any time. Pin a version of `flappie-api` if you
     need stability.
 
     Note the inconsistent slash convention between `/api/v1/devices` and the

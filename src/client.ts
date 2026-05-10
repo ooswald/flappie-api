@@ -82,7 +82,7 @@ export class FlappieClient {
     const f = opts.fetch ?? globalThis.fetch;
     if (!f) throw new Error("FlappieClient: no fetch implementation available - pass `fetch` in options");
     this.fetchFn = f.bind(globalThis);
-    this.userAgent = opts.userAgent ?? "flappie-sdk";
+    this.userAgent = opts.userAgent ?? "flappie-api";
   }
 
   /** Snapshot of the current auth state (token pair + email). */

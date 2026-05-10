@@ -3,7 +3,7 @@
  *
  * @example
  * ```ts
- * import { FlappieClient } from "flappie-sdk";
+ * import { FlappieClient } from "flappie-api";
  *
  * const client = new FlappieClient({
  *   auth: { access_token: process.env.FLAPPIE_TOKEN },
@@ -15,7 +15,7 @@
  *
  * @example Persisting tokens to disk:
  * ```ts
- * import { FlappieClient } from "flappie-sdk";
+ * import { FlappieClient } from "flappie-api";
  * import { writeFileSync, readFileSync } from "node:fs";
  *
  * const path = "/var/lib/myapp/flappie.json";
