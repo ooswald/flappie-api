@@ -42,10 +42,10 @@ function client(): FlappieClient {
       baseUrl: process.env["FLAPPIE_API"],
       auth: loadConfig(),
       onAuthChange: saveConfig,
-      userAgent: "flappie-cli",
+      userAgent: "flappie-sdk",
     });
   }
-  return new FlappieClient({ auth: loadConfig(), onAuthChange: saveConfig, userAgent: "flappie-cli" });
+  return new FlappieClient({ auth: loadConfig(), onAuthChange: saveConfig, userAgent: "flappie-sdk" });
 }
 
 function resolveDevice(devices: Device[], ref: string | undefined): Device {

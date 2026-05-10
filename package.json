@@ -1,7 +1,7 @@
 {
-  "name": "flappie-cli",
+  "name": "flappie-sdk",
   "version": "0.4.0",
-  "description": "Typed Node client + CLI for the (undocumented) Flappie cat-door cloud API",
+  "description": "Control your Flappie cat door from Node or the terminal. Typed TypeScript client with full CRUD for time plans, settings, and prey events. Unofficial, not associated with Flappie Technologies AG.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

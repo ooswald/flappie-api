@@ -4,7 +4,7 @@ This is a best-effort reference for the cloud API at `https://app.flappiedoors.c
 
 Each endpoint is marked with a CLI status:
 
-- ✅ wired up in `flappie-cli`
+- ✅ wired up in `flappie-sdk`
 - 🟡 known endpoint, not (yet) wrapped in the CLI — easy add
 - 🔒 known but intentionally not implemented (dangerous, mobile-only, or out of scope)
 

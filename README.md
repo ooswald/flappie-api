@@ -1,4 +1,6 @@
-# flappie-cli
+# flappie-sdk
+
+> **Control your Flappie cat door from Node or the terminal.** Typed TypeScript client with full CRUD for time plans, settings, and prey events. Unofficial, not associated with Flappie Technologies AG.
 
 A typed Node.js client + CLI for [Flappie](https://flappiedoors.com) cat doors. It talks to the cloud API at `app.flappiedoors.com` — the same one the mobile app uses — and lets you script lock / unlock, policy changes, time plans, prey-detection events, stats and dashboard reads from a terminal, a home-automation system, or your own Node app.
 
@@ -15,8 +17,8 @@ A typed Node.js client + CLI for [Flappie](https://flappiedoors.com) cat doors. 
 As a CLI (globally):
 
 ```bash
-git clone <this-repo> flappie-cli
-cd flappie-cli
+git clone <this-repo> flappie-sdk
+cd flappie-sdk
 npm install                          # also runs `npm run build`
 npm link                             # puts `flappie` on your PATH
 # or:  ln -sf "$(pwd)/dist/cli.js" ~/.local/bin/flappie
@@ -25,7 +27,7 @@ npm link                             # puts `flappie` on your PATH
 As a library (in your own Node project, once published to npm):
 
 ```bash
-npm install flappie-cli
+npm install flappie-sdk
 ```
 
 Requires Node.js 18+ (for global `fetch`).
@@ -33,7 +35,7 @@ Requires Node.js 18+ (for global `fetch`).
 ## Use as a library
 
 ```ts
-import { FlappieClient, FlappieApiError } from "flappie-cli";
+import { FlappieClient, FlappieApiError } from "flappie-sdk";
 import { readFileSync, writeFileSync } from "node:fs";
 
 // Persist tokens wherever you like (file, db, redis, env).
