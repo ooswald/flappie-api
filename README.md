@@ -32,7 +32,14 @@ As a library (in your own Node project, once published to npm):
 npm install flappie-api
 ```
 
-Requires Node.js 18+ (for global `fetch`).
+Requires Node.js 18+ (for global `fetch`); the test runner uses Node's built-in TypeScript stripping (Node ≥ 22.6).
+
+## Develop
+
+```bash
+npm run build      # tsc -> dist/
+npm test           # unit tests for the pure CLI helpers (node:test)
+```
 
 ## Use as a library
 
