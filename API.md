@@ -99,7 +99,7 @@ Settings response shape (live):
 ```json
 {
   "id": 744,
-  "catflap_id": "75cdf8fce3cbbae3",
+  "catflap_id": "<device-id>",
   "open_status": "OPEN",
   "power_off_open_status": false,
   "buttons_enabled": false,
@@ -183,7 +183,7 @@ List response shape:
   "records": [
     {
       "id": 803166,
-      "catflap_id": "75cdf8fce3cbbae3",
+      "catflap_id": "<device-id>",
       "is_viewed": false,
       "is_favorite": false,
       "is_prey": false,
