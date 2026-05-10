@@ -4,6 +4,8 @@
 
 A typed Node.js client + CLI for [Flappie](https://flappiedoors.com) cat doors. It talks to the cloud API at `app.flappiedoors.com` — the same one the mobile app uses — and lets you script lock / unlock, policy changes, time plans, prey-detection events, stats and dashboard reads from a terminal, a home-automation system, or your own Node app.
 
+This repository was entirely made by Claude Code and will be maintained by it. I did not test everything. Use at your own risk. Submit an issue or PR if something is broken.
+
 > The vendor has not published an official public API. Endpoint names, fields, and behaviour can change at any time. Pin a release if you need stability.
 >
 > There is no documented local control: the door talks only to the cloud, and so does this client. Anything you can do via the official app should be doable here, plus a few raw escape hatches.
