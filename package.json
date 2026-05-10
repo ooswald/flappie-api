@@ -1,0 +1,34 @@
+{
+  "name": "flappie-api",
+  "version": "0.4.0",
+  "description": "Control your Flappie cat door from Node or the terminal. Typed TypeScript client with full CRUD for time plans, settings, and prey events. Unofficial, not associated with Flappie Technologies AG.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "flappie": "./dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "API.md",
+    "openapi.yaml"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "commander": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.2",
+    "typescript": "^6.0.3"
+  }
+}

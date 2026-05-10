@@ -1,0 +1,1132 @@
+openapi: 3.1.0
+info:
+  title: Flappie cloud API (unofficial)
+  version: "0.3.0"
+  description: |
+    Best-effort OpenAPI description of the **undocumented** cloud API at
+    `app.flappiedoors.com` that the Flappie cat-door mobile app uses.
+
+    The vendor has not published an official spec; field names, types and
+    behaviour can change at any time. Pin a version of `flappie-api` if you
+    need stability.
+
+    Note the inconsistent slash convention between `/api/v1/devices` and the
+    device id: `/settings` and the bare device PATCH expect **no** slash,
+    while `/information`, `/timeplans` and `/status` do. The paths below
+    reflect what the server actually accepts.
+  license:
+    name: MIT
+servers:
+  - url: https://app.flappiedoors.com
+    description: Production
+security:
+  - bearerAuth: []
+tags:
+  - name: auth
+  - name: user
+  - name: devices
+  - name: timeplans
+  - name: cats
+  - name: bundles
+  - name: collections
+  - name: news
+  - name: statistics
+  - name: dashboard
+  - name: tv
+
+paths:
+  /api/v1/users/login:
+    post:
+      tags: [auth]
+      summary: Sign in with email + password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Token pair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPair"
+        "401":
+          description: Bad credentials
+
+  /api/v1/users/refresh:
+    post:
+      tags: [auth]
+      summary: Trade a refresh token for a new access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        "200":
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPair"
+
+  /api/v1/users/validate-email:
+    post:
+      tags: [auth]
+      summary: Check whether an email is already registered
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "200": { description: OK }
+
+  /api/v1/users/reset-password:
+    post:
+      tags: [auth]
+      summary: Send password-reset code to user's email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "200": { description: OK }
+
+  /api/v1/users/reset-password/confirm-code:
+    post:
+      tags: [auth]
+      summary: Confirm a password-reset code
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email: { type: string, format: email }
+                code: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /api/v1/users/reset-password/set-new-password:
+    post:
+      tags: [auth]
+      summary: Finalize password reset with a new password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code, password]
+              properties:
+                email: { type: string, format: email }
+                code: { type: string }
+                password: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /api/v1/users:
+    get:
+      tags: [user]
+      summary: Get the current user's profile
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    post:
+      tags: [auth]
+      summary: Register a new account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    put:
+      tags: [user]
+      summary: Edit user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditUserRequest"
+      responses:
+        "200": { description: OK }
+    patch:
+      tags: [user]
+      summary: |
+        Overloaded PATCH — the body decides which sub-feature is updated.
+        Send only the fields you actually want to change.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/AiTrainingPatch"
+                - $ref: "#/components/schemas/UserLanguagePatch"
+                - $ref: "#/components/schemas/MarketingEmailPatch"
+                - $ref: "#/components/schemas/UserInfoLocationPatch"
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [user]
+      summary: Delete the current user (irreversible)
+      responses:
+        "204": { description: Deleted }
+
+  /api/v1/users/avatar:
+    post:
+      tags: [user]
+      summary: Upload a user avatar
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200": { description: OK }
+
+  /api/v1/users/data-export:
+    post:
+      tags: [user]
+      summary: Trigger a GDPR data export
+      responses:
+        "200": { description: Accepted }
+
+  /api/v1/users/fcm-token:
+    post:
+      tags: [user]
+      summary: Register a Firebase push token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /api/v1/devices:
+    get:
+      tags: [devices]
+      summary: List all devices on the account
+      responses:
+        "200":
+          description: Devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Device" }
+
+  /api/v1/devices/{id}/information:
+    get:
+      tags: [devices]
+      summary: Device information (model, firmware, AI model, ...)
+      parameters: [{ $ref: "#/components/parameters/DeviceId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeviceInformation" }
+
+  /api/v1/devices/{id}/status:
+    get:
+      tags: [devices]
+      summary: Realtime door state
+      parameters: [{ $ref: "#/components/parameters/DeviceId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeviceStatus" }
+
+  "/api/v1/devices{id}/settings":
+    get:
+      tags: [devices]
+      summary: Device settings (door policy, AI, etc)
+      description: |
+        Note: there is **no slash** between `/devices` and `{id}`. This is a
+        backend quirk — the route only resolves in this form.
+      parameters: [{ $ref: "#/components/parameters/DeviceIdNoSlash" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeviceSettings" }
+    patch:
+      tags: [devices]
+      summary: Update device settings (any subset)
+      parameters: [{ $ref: "#/components/parameters/DeviceIdNoSlash" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DeviceSettingsPatch" }
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeviceSettings" }
+
+  "/api/v1/devices{id}":
+    patch:
+      tags: [devices]
+      summary: Rename device or update its location/zone
+      description: |
+        Overloaded PATCH on the bare device path (no slash). Send only
+        the fields you want to change.
+      parameters: [{ $ref: "#/components/parameters/DeviceIdNoSlash" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                zone_info: { type: string }
+                country_code: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /api/v1/devices/assign:
+    post:
+      tags: [devices]
+      summary: Claim a physical device for the current account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /api/v1/devices/unassign:
+    delete:
+      tags: [devices]
+      summary: Release a physical device from the current account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /api/v1/devices/{id}/timeplans:
+    get:
+      tags: [timeplans]
+      summary: List time plans for a device
+      parameters: [{ $ref: "#/components/parameters/DeviceId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TimePlan" }
+    post:
+      tags: [timeplans]
+      summary: Create a time plan
+      parameters: [{ $ref: "#/components/parameters/DeviceId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TimePlanRequest" }
+      responses:
+        "200":
+          description: Created (returns the updated plan list)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TimePlan" }
+
+  /api/v1/devices/{id}/timeplans/{tpId}:
+    put:
+      tags: [timeplans]
+      summary: Replace a time plan in full
+      parameters:
+        - { $ref: "#/components/parameters/DeviceId" }
+        - { $ref: "#/components/parameters/TimePlanId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TimePlanRequest" }
+      responses:
+        "200":
+          description: Updated (returns the updated plan list)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TimePlan" }
+    delete:
+      tags: [timeplans]
+      summary: Delete a time plan
+      parameters:
+        - { $ref: "#/components/parameters/DeviceId" }
+        - { $ref: "#/components/parameters/TimePlanId" }
+      responses:
+        "204": { description: Deleted }
+
+  /api/v1/cats:
+    get:
+      tags: [cats]
+      summary: List cat profiles
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Cat" }
+    post:
+      tags: [cats]
+      summary: Add a cat profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CatRequest" }
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cat" }
+
+  /api/v1/cats/{id}:
+    put:
+      tags: [cats]
+      summary: Edit a cat profile
+      parameters: [{ $ref: "#/components/parameters/CatId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CatRequest" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cat" }
+    delete:
+      tags: [cats]
+      summary: Delete a cat profile
+      parameters: [{ $ref: "#/components/parameters/CatId" }]
+      responses:
+        "204": { description: Deleted }
+
+  /api/v1/cats/{id}/avatar:
+    post:
+      tags: [cats]
+      summary: Upload a cat avatar
+      parameters: [{ $ref: "#/components/parameters/CatId" }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "200": { description: OK }
+
+  /api/v1/cats/breed-types:
+    get:
+      tags: [cats]
+      summary: Lookup table of cat breeds the app recognises
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  breed_types:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key: { type: string, description: "English breed key" }
+                        value: { type: string, description: "Localised display name" }
+
+  /api/v1/bundles:
+    get:
+      tags: [bundles]
+      summary: List bundles (events, paginated)
+      parameters:
+        - { in: query, name: page, schema: { type: integer, default: 1 } }
+        - { in: query, name: order_by, schema: { type: string, enum: [createdAt] } }
+        - { in: query, name: order_direction, schema: { type: string, enum: [asc, desc], default: desc } }
+        - { in: query, name: fromCreatedAt, schema: { type: string, format: date-time } }
+        - { in: query, name: toCreatedAt, schema: { type: string, format: date-time } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BundlesPage" }
+    delete:
+      tags: [bundles]
+      summary: Bulk-delete bundles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items: { type: integer }
+      responses:
+        "200": { description: OK }
+
+  /api/v1/bundles/{id}:
+    get:
+      tags: [bundles]
+      summary: Get a single bundle
+      parameters: [{ $ref: "#/components/parameters/BundleId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Bundle" }
+    delete:
+      tags: [bundles]
+      summary: Delete a single bundle
+      parameters: [{ $ref: "#/components/parameters/BundleId" }]
+      responses:
+        "204": { description: Deleted }
+
+  /api/v1/bundles/{id}/mark-as-view:
+    patch:
+      tags: [bundles]
+      summary: Mark bundle as viewed
+      parameters: [{ $ref: "#/components/parameters/BundleId" }]
+      responses:
+        "200": { description: OK }
+
+  /api/v1/collections:
+    get:
+      tags: [collections]
+      summary: List user collections (paginated)
+      parameters:
+        - { in: query, name: page, schema: { type: integer, default: 1 } }
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [collections]
+      summary: Add a collection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                bundle_ids:
+                  type: array
+                  items: { type: integer }
+      responses:
+        "200": { description: OK }
+
+  /api/v1/collections/{id}:
+    get:
+      tags: [collections]
+      summary: Get a single collection
+      parameters: [{ $ref: "#/components/parameters/CollectionId" }]
+      responses:
+        "200": { description: OK }
+    put:
+      tags: [collections]
+      summary: Edit a collection
+      parameters: [{ $ref: "#/components/parameters/CollectionId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                bundle_ids:
+                  type: array
+                  items: { type: integer }
+      responses:
+        "200": { description: OK }
+    patch:
+      tags: [collections]
+      summary: Toggle "favourite" flag on a collection
+      parameters: [{ $ref: "#/components/parameters/CollectionId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_favorite: { type: boolean }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [collections]
+      summary: Delete a collection
+      parameters: [{ $ref: "#/components/parameters/CollectionId" }]
+      responses:
+        "204": { description: Deleted }
+
+  /api/v1/collections/bulk-delete:
+    post:
+      tags: [collections]
+      summary: Bulk-delete collections
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items: { type: integer }
+      responses:
+        "200": { description: OK }
+
+  /api/v1/news/:
+    get:
+      tags: [news]
+      summary: List news / notification items
+      responses:
+        "200": { description: OK }
+
+  /api/v1/news/{id}/read:
+    patch:
+      tags: [news]
+      summary: Mark a single news item as read
+      parameters: [{ $ref: "#/components/parameters/NewsId" }]
+      responses:
+        "200": { description: OK }
+
+  /api/v1/news/read-all:
+    patch:
+      tags: [news]
+      summary: Mark all news items as read
+      responses:
+        "200": { description: OK }
+
+  /api/v1/statistics/hunting:
+    get:
+      tags: [statistics]
+      summary: Hunting stats
+      parameters:
+        - { in: query, name: group_by_period, required: true, schema: { type: string, enum: [hour, day, week, month] } }
+        - { in: query, name: start_date, schema: { type: string, format: date } }
+        - { in: query, name: end_date, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HuntingStats" }
+
+  /api/v1/statistics/prey:
+    get:
+      tags: [statistics]
+      summary: Prey-detection time series
+      parameters:
+        - { in: query, name: group_by_period, required: true, schema: { type: string, enum: [hour, day, week, month] } }
+        - { in: query, name: start_date, schema: { type: string, format: date } }
+        - { in: query, name: end_date, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/GraphPoint" }
+
+  /api/v1/dashboard:
+    get:
+      tags: [dashboard]
+      summary: Aggregated dashboard payload
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Dashboard" }
+
+  /api/v1/flappie-tv:
+    get:
+      tags: [tv]
+      summary: List community video reels (paginated)
+      parameters:
+        - { in: query, name: page, schema: { type: integer, default: 1 } }
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [tv]
+      summary: Report viewed reel ids
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                viewed_reel_ids:
+                  type: array
+                  items: { type: integer }
+      responses:
+        "200": { description: OK }
+
+  /api/v1/flappie-tv/{id}/flag:
+    post:
+      tags: [tv]
+      summary: Flag a reel
+      parameters: [{ $ref: "#/components/parameters/ReelId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /api/v1/reports:
+    post:
+      tags: [tv]
+      summary: Create a report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subject: { type: string }
+                message: { type: string }
+                target_id: { type: integer }
+      responses:
+        "200": { description: OK }
+
+  /api/v1/reports/subjects:
+    get:
+      tags: [tv]
+      summary: Lookup table of report subjects
+      responses:
+        "200": { description: OK }
+
+  /api/v1/video-reports/:
+    post:
+      tags: [tv]
+      summary: Submit a video report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                video_id: { type: integer }
+                reason: { type: string }
+      responses:
+        "200": { description: OK }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    DeviceId:
+      in: path
+      name: id
+      required: true
+      schema: { type: string }
+      description: catflap_id (hex string)
+    DeviceIdNoSlash:
+      in: path
+      name: id
+      required: true
+      schema: { type: string }
+      description: |
+        catflap_id concatenated **without** a slash separator. Yes, this is
+        weird, but it's what the backend expects on these specific routes.
+    TimePlanId:
+      in: path
+      name: tpId
+      required: true
+      schema: { type: integer }
+    CatId:
+      in: path
+      name: id
+      required: true
+      schema: { type: integer }
+    BundleId:
+      in: path
+      name: id
+      required: true
+      schema: { type: integer }
+    CollectionId:
+      in: path
+      name: id
+      required: true
+      schema: { type: integer }
+    NewsId:
+      in: path
+      name: id
+      required: true
+      schema: { type: integer }
+    ReelId:
+      in: path
+      name: id
+      required: true
+      schema: { type: integer }
+
+  schemas:
+    DoorPolicy:
+      type: string
+      enum: [OPEN, CLOSED, OPEN_IN, OPEN_OUT]
+      description: |
+        - `OPEN`: open in both directions (= unlocked)
+        - `CLOSED`: closed in both directions (= locked)
+        - `OPEN_IN`: only inbound (keep cat inside)
+        - `OPEN_OUT`: only outbound (keep cat outside)
+    Gender:
+      type: string
+      enum: [FEMALE, MALE, UNKNOWN]
+    Weekday:
+      type: integer
+      minimum: 1
+      maximum: 7
+      description: ISO weekday — 1 = Monday … 7 = Sunday
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    TokenPair:
+      type: object
+      properties:
+        access_token: { type: string }
+        refresh_token: { type: string }
+        token_type: { type: string, example: "bearer" }
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+        first_name: { type: string }
+        last_name: { type: string }
+        country_code: { type: string }
+        zone_info: { type: string }
+
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string, format: email }
+        first_name: { type: string, nullable: true }
+        last_name: { type: string, nullable: true }
+        zone_info: { type: string }
+        country_code: { type: string }
+        ai_training_preference: { type: boolean }
+        receive_marketing_email: { type: boolean }
+        language: { type: string }
+    EditUserRequest:
+      type: object
+      properties:
+        first_name: { type: string }
+        last_name: { type: string }
+        zone_info: { type: string }
+        country_code: { type: string }
+    AiTrainingPatch:
+      type: object
+      required: [ai_training_preference]
+      properties:
+        ai_training_preference: { type: boolean }
+    UserLanguagePatch:
+      type: object
+      required: [language]
+      properties:
+        language: { type: string, example: "de" }
+    MarketingEmailPatch:
+      type: object
+      required: [receive_marketing_email]
+      properties:
+        receive_marketing_email: { type: boolean }
+    UserInfoLocationPatch:
+      type: object
+      properties:
+        zone_info: { type: string }
+        country_code: { type: string }
+
+    Device:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        model: { type: string }
+        firmware_version: { type: string }
+        software_version: { type: string }
+        registered_at: { type: string, format: date }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        zone_info: { type: string }
+        display_region_label: { type: string }
+        country_code: { type: string }
+        operational_status: { type: integer, description: "1 = ok" }
+        is_active: { type: boolean, nullable: true }
+    DeviceInformation:
+      allOf:
+        - $ref: "#/components/schemas/Device"
+        - type: object
+          properties:
+            ai_model: { type: string }
+    DeviceStatus:
+      type: object
+      properties:
+        state: { type: string, enum: [unlocked, locked] }
+        reason: { type: string, nullable: true }
+        lock_started_at: { type: string, format: date-time, nullable: true }
+        lock_until: { type: string, format: date-time, nullable: true }
+    DeviceSettings:
+      type: object
+      properties:
+        id: { type: integer }
+        catflap_id: { type: string }
+        open_status: { $ref: "#/components/schemas/DoorPolicy" }
+        power_off_open_status:
+          oneOf:
+            - { $ref: "#/components/schemas/DoorPolicy" }
+            - { type: boolean }
+          description: |
+            Stored as a boolean on the backend in the GET response, but PATCH
+            accepts a `DoorPolicy` value too — likely a backend leftover.
+        buttons_enabled: { type: boolean }
+        rfid: { type: boolean }
+        prey_detection: { type: boolean }
+        prey_detection_user_preference: { type: boolean }
+        prey_detection_system_lock: { type: boolean }
+        prey_timed_lock_enabled: { type: boolean }
+        prey_timed_lock_duration_seconds: { type: integer }
+        zone_info: { type: string }
+        active_plan: { type: integer, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    DeviceSettingsPatch:
+      type: object
+      properties:
+        open_status: { $ref: "#/components/schemas/DoorPolicy" }
+        power_off_open_status: { $ref: "#/components/schemas/DoorPolicy" }
+        buttons_enabled: { type: boolean }
+        prey_detection_user_preference: { type: boolean }
+        prey_timed_lock_enabled: { type: boolean }
+        prey_timed_lock_duration_seconds: { type: integer }
+        rfid: { type: boolean }
+
+    TimePlanRequest:
+      type: object
+      required:
+        - open_time
+        - close_time
+        - open_status
+        - weekdays
+        - start_date
+        - end_date
+        - is_active
+      properties:
+        open_time: { type: string, example: "07:00", description: "HH:MM (server normalises to HH:MM:SS)" }
+        close_time: { type: string, example: "22:00" }
+        open_status: { $ref: "#/components/schemas/DoorPolicy" }
+        weekdays:
+          type: array
+          items: { $ref: "#/components/schemas/Weekday" }
+        start_date: { type: string, format: date }
+        end_date: { type: string, format: date }
+        is_active: { type: boolean }
+    TimePlan:
+      allOf:
+        - { $ref: "#/components/schemas/TimePlanRequest" }
+        - type: object
+          properties:
+            id: { type: integer }
+
+    Cat:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        birthday: { type: string, format: date, nullable: true }
+        gender: { $ref: "#/components/schemas/Gender" }
+        breed: { type: string, nullable: true }
+        weight: { type: number, nullable: true }
+        avatar_url: { type: string, nullable: true }
+    CatRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        birthday: { type: string, format: date }
+        gender: { $ref: "#/components/schemas/Gender" }
+        breed: { type: string }
+        weight: { type: number }
+
+    BundlesPage:
+      type: object
+      properties:
+        total: { type: integer }
+        page: { type: integer }
+        page_size: { type: integer }
+        total_pages: { type: integer }
+        prev_page: { type: integer, nullable: true }
+        next_page: { type: integer, nullable: true }
+        records:
+          type: array
+          items: { $ref: "#/components/schemas/Bundle" }
+    Bundle:
+      type: object
+      properties:
+        id: { type: integer }
+        catflap_id: { type: string }
+        is_viewed: { type: boolean }
+        is_favorite: { type: boolean }
+        is_prey: { type: boolean }
+        is_saved: { type: boolean }
+        image: { type: string, format: uri, description: "Time-limited URL (token + expires)" }
+        image_files:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer }
+              url: { type: string, format: uri }
+        video_file:
+          nullable: true
+          type: object
+          properties:
+            id: { type: integer }
+            url: { type: string, format: uri }
+        expired_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    Dashboard:
+      type: object
+      properties:
+        blocked_prey: { type: integer }
+        latest_prey_detection:
+          nullable: true
+          type: object
+        operational_status:
+          type: array
+          items:
+            type: object
+            properties:
+              device_id: { type: string }
+              name: { type: string }
+              status: { type: integer, description: "1 = ok" }
+              registration_date: { type: string, format: date-time }
+              prey_detection_user_preference: { type: boolean }
+              prey_detection_system_lock: { type: boolean }
+              signal_quality: { type: integer }
+        banner: { type: object, nullable: true }
+        is_timeplan_active: { type: boolean }
+
+    GraphPoint:
+      type: object
+      properties:
+        date: { type: string, format: date-time }
+        event_count: { type: number }
+        mean_event_count: { type: number, description: "Per-period mean across the user's history" }
+
+    HuntingStats:
+      type: object
+      properties:
+        flappieverse_avg: { type: number, description: "Community-wide average" }
+        household_avg: { type: number }
+        hunt_comparison: { type: string }
+        hunt_percentage_diff: { type: number }
+        less: { type: boolean }
+        top_n: { type: integer }

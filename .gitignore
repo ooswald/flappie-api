@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.xapk
+*.apk
+xapk-extract/
+arm64-extract/
+main-extract/
+decompiled/
+blutter-out/
+*.log
+*.tsbuildinfo
