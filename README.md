@@ -1,25 +1,92 @@
 # flappie-cli
 
-A small CLI for [Flappie](https://flappiedoors.com) cat doors. It talks to the cloud API at `app.flappiedoors.com` — the same one the mobile app uses — and lets you script lock / unlock, policy changes, time plans, prey-detection events, stats and dashboard reads from a terminal or a home-automation system.
+A typed Node.js client + CLI for [Flappie](https://flappiedoors.com) cat doors. It talks to the cloud API at `app.flappiedoors.com` — the same one the mobile app uses — and lets you script lock / unlock, policy changes, time plans, prey-detection events, stats and dashboard reads from a terminal, a home-automation system, or your own Node app.
 
 > The vendor has not published an official public API. Endpoint names, fields, and behaviour can change at any time. Pin a release if you need stability.
 >
-> There is no documented local control: the door talks only to the cloud, and so does this CLI. Anything you can do via the official app should be doable here, plus a few raw escape hatches.
+> There is no documented local control: the door talks only to the cloud, and so does this client. Anything you can do via the official app should be doable here, plus a few raw escape hatches.
 
 ## Status
 
-**v0.3 — full read & write surface for everyday use.** Login, devices, dashboard, stats with finer time resolution, news, lock / unlock, door policy, AI toggle, buttons, rename, full **time-plan CRUD**, **bundles** (prey/activity events with media URLs), and **cat-profile CRUD**. See `API.md` for the complete endpoint reference and `openapi.yaml` for a machine-readable spec.
+**v0.4 — typed library + CLI from a single TypeScript source.** Login, devices, dashboard, stats with finer time resolution, news, lock / unlock, door policy, AI toggle, buttons, rename, full **time-plan CRUD**, **bundles** (prey/activity events with media URLs), and **cat-profile CRUD**. See `API.md` for the complete endpoint reference and `openapi.yaml` for a machine-readable spec.
 
 ## Install
+
+As a CLI (globally):
 
 ```bash
 git clone <this-repo> flappie-cli
 cd flappie-cli
-npm install
-ln -sf "$(pwd)/bin/flappie.js" ~/.local/bin/flappie
+npm install                          # also runs `npm run build`
+npm link                             # puts `flappie` on your PATH
+# or:  ln -sf "$(pwd)/dist/cli.js" ~/.local/bin/flappie
+```
+
+As a library (in your own Node project, once published to npm):
+
+```bash
+npm install flappie-cli
 ```
 
 Requires Node.js 18+ (for global `fetch`).
+
+## Use as a library
+
+```ts
+import { FlappieClient, FlappieApiError } from "flappie-cli";
+import { readFileSync, writeFileSync } from "node:fs";
+
+// Persist tokens wherever you like (file, db, redis, env).
+const tokenFile = "./flappie-tokens.json";
+let auth = {};
+try { auth = JSON.parse(readFileSync(tokenFile, "utf8")); } catch { /* first run */ }
+
+const flappie = new FlappieClient({
+  auth,
+  onAuthChange: (next) => writeFileSync(tokenFile, JSON.stringify(next, null, 2)),
+});
+
+if (!flappie.isAuthenticated) {
+  await flappie.login(process.env.FLAPPIE_EMAIL!, process.env.FLAPPIE_PASSWORD!);
+}
+
+const devices = await flappie.listDevices();
+const door = devices[0];
+
+// Typed reads
+const settings = await flappie.getDeviceSettings(door.id);
+console.log(settings.open_status);            // "OPEN" | "CLOSED" | "OPEN_IN" | "OPEN_OUT"
+
+// Typed writes
+await flappie.lock(door.id);
+await flappie.setDoorPolicy(door.id, "OPEN_IN");
+await flappie.patchDeviceSettings(door.id, { buttons_enabled: false });
+
+// Schedule
+await flappie.addDeviceTimePlan(door.id, {
+  open_time: "07:00", close_time: "22:00",
+  open_status: "OPEN",
+  weekdays: [1, 2, 3, 4, 5],
+  start_date: "2026-05-10", end_date: "2026-12-31",
+  is_active: true,
+});
+
+// Prey/activity events
+const events = await flappie.listBundles({ from: "2026-05-01", order: "desc" });
+for (const b of events.records) {
+  console.log(b.created_at, b.is_prey ? "prey" : "cat", b.image);
+}
+```
+
+Errors are thrown as `FlappieApiError` with `status` and parsed `body` for inspection.
+
+The 401 → refresh-token flow is automatic. If you persist tokens, wire up `onAuthChange` so refreshed tokens are saved.
+
+Token refresh against an arbitrary backend host:
+
+```ts
+new FlappieClient({ baseUrl: "https://my-proxy.example.com", auth });
+```
 
 ## Use
 
