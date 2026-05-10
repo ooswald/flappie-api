@@ -279,9 +279,240 @@ program
     } catch (e) { fail(e); }
   });
 
+const WEEKDAYS = { mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, sun: 7 };
+function parseWeekdays(spec) {
+  if (!spec) return [1, 2, 3, 4, 5, 6, 7];
+  if (spec === "weekdays") return [1, 2, 3, 4, 5];
+  if (spec === "weekend") return [6, 7];
+  if (spec === "all" || spec === "every") return [1, 2, 3, 4, 5, 6, 7];
+  return spec.split(",").map((s) => {
+    const t = s.trim().toLowerCase();
+    if (WEEKDAYS[t.slice(0, 3)]) return WEEKDAYS[t.slice(0, 3)];
+    const n = Number(t);
+    if (n >= 1 && n <= 7) return n;
+    throw new Error(`unknown weekday: "${s}". Use mon..sun, 1..7, or weekdays/weekend/all`);
+  });
+}
+
+const timeplan = program.command("timeplan").description("Time plan management");
+
+timeplan
+  .command("list [device]")
+  .description("List time plans configured on the device")
+  .action(async (ref) => {
+    try {
+      const f = new Flappie();
+      const d = resolveDevice(await f.listDevices(), ref);
+      console.log(JSON.stringify(await f.getDeviceTimePlans(d.id), null, 2));
+    } catch (e) { fail(e); }
+  });
+
+timeplan
+  .command("add")
+  .description("Add a new time plan to a device")
+  .requiredOption("--open <HH:MM>", "time of day to open (e.g. 07:00)")
+  .requiredOption("--close <HH:MM>", "time of day to close (e.g. 22:00)")
+  .requiredOption("--policy <policy>", `door policy during the open window: ${POLICIES.join(" | ")}`)
+  .requiredOption("--start <YYYY-MM-DD>", "first date the plan applies on")
+  .requiredOption("--end <YYYY-MM-DD>", "last date the plan applies on")
+  .option("--days <list>", "comma-separated weekdays (mon,tue,..) or weekdays/weekend/all", "all")
+  .option("--inactive", "create the plan in inactive state", false)
+  .option("--device <device>", "device id or name fragment if more than one")
+  .action(async (opts) => {
+    try {
+      const f = new Flappie();
+      const d = resolveDevice(await f.listDevices(), opts.device);
+      const body = {
+        open_time: opts.open,
+        close_time: opts.close,
+        open_status: normalizePolicy(opts.policy),
+        weekdays: parseWeekdays(opts.days),
+        is_active: !opts.inactive,
+        start_date: opts.start,
+        end_date: opts.end,
+      };
+      console.log(JSON.stringify(await f.addDeviceTimePlan(d.id, body), null, 2));
+    } catch (e) { fail(e); }
+  });
+
+timeplan
+  .command("edit <id>")
+  .description("Edit an existing time plan (PUT replaces all fields)")
+  .requiredOption("--open <HH:MM>")
+  .requiredOption("--close <HH:MM>")
+  .requiredOption("--policy <policy>", `door policy: ${POLICIES.join(" | ")}`)
+  .requiredOption("--start <YYYY-MM-DD>")
+  .requiredOption("--end <YYYY-MM-DD>")
+  .option("--days <list>", "comma-separated weekdays or weekdays/weekend/all", "all")
+  .option("--active <bool>", "true/false", "true")
+  .option("--device <device>")
+  .action(async (id, opts) => {
+    try {
+      const f = new Flappie();
+      const d = resolveDevice(await f.listDevices(), opts.device);
+      const body = {
+        open_time: opts.open,
+        close_time: opts.close,
+        open_status: normalizePolicy(opts.policy),
+        weekdays: parseWeekdays(opts.days),
+        is_active: parseBool(opts.active),
+        start_date: opts.start,
+        end_date: opts.end,
+      };
+      console.log(JSON.stringify(await f.editDeviceTimePlan(d.id, id, body), null, 2));
+    } catch (e) { fail(e); }
+  });
+
+timeplan
+  .command("delete <id>")
+  .description("Delete a time plan")
+  .option("--device <device>")
+  .action(async (id, opts) => {
+    try {
+      const f = new Flappie();
+      const d = resolveDevice(await f.listDevices(), opts.device);
+      await f.deleteDeviceTimePlan(d.id, id);
+      console.log(`time plan ${id}: deleted`);
+    } catch (e) { fail(e); }
+  });
+
+const bundles = program.command("bundles").description("Prey/activity detections (photos & videos)");
+
+bundles
+  .command("list", { isDefault: true })
+  .description("List bundles, paginated")
+  .option("-p, --page <n>", "page number (1-indexed)", "1")
+  .option("-f, --from <YYYY-MM-DD>", "filter: from this date")
+  .option("-t, --to <YYYY-MM-DD>", "filter: up to this date")
+  .option("-o, --order <asc|desc>", "createdAt sort direction", "desc")
+  .action(async (opts) => {
+    try {
+      const f = new Flappie();
+      const data = await f.listBundles({
+        page: Number(opts.page),
+        from: opts.from,
+        to: opts.to,
+        order: opts.order,
+      });
+      console.log(JSON.stringify(data, null, 2));
+    } catch (e) { fail(e); }
+  });
+
+bundles
+  .command("show <id>")
+  .description("Show a single bundle")
+  .action(async (id) => {
+    try { console.log(JSON.stringify(await new Flappie().getBundle(id), null, 2)); } catch (e) { fail(e); }
+  });
+
+const cat = program.command("cat").description("Cat profile management");
+
+cat
+  .command("list", { isDefault: true })
+  .description("List cat profiles (alias for top-level `flappie cats`)")
+  .action(async () => {
+    try { console.log(JSON.stringify(await new Flappie().listCats(), null, 2)); } catch (e) { fail(e); }
+  });
+
+cat
+  .command("breeds")
+  .description("List the cat breeds the API knows about")
+  .action(async () => {
+    try { console.log(JSON.stringify(await new Flappie().catBreeds(), null, 2)); } catch (e) { fail(e); }
+  });
+
+cat
+  .command("add")
+  .description("Add a new cat profile")
+  .requiredOption("--name <name>")
+  .option("--birthday <YYYY-MM-DD>")
+  .option("--gender <FEMALE|MALE|UNKNOWN>")
+  .option("--breed <breed>")
+  .option("--weight <kg>")
+  .action(async (opts) => {
+    try {
+      const body = { name: opts.name };
+      if (opts.birthday) body.birthday = opts.birthday;
+      if (opts.gender) body.gender = String(opts.gender).toUpperCase();
+      if (opts.breed) body.breed = opts.breed;
+      if (opts.weight !== undefined) body.weight = Number(opts.weight);
+      console.log(JSON.stringify(await new Flappie().addCat(body), null, 2));
+    } catch (e) { fail(e); }
+  });
+
+cat
+  .command("edit <id>")
+  .description("Edit an existing cat profile")
+  .option("--name <name>")
+  .option("--birthday <YYYY-MM-DD>")
+  .option("--gender <FEMALE|MALE|UNKNOWN>")
+  .option("--breed <breed>")
+  .option("--weight <kg>")
+  .action(async (id, opts) => {
+    try {
+      const body = {};
+      if (opts.name) body.name = opts.name;
+      if (opts.birthday) body.birthday = opts.birthday;
+      if (opts.gender) body.gender = String(opts.gender).toUpperCase();
+      if (opts.breed) body.breed = opts.breed;
+      if (opts.weight !== undefined) body.weight = Number(opts.weight);
+      console.log(JSON.stringify(await new Flappie().editCat(id, body), null, 2));
+    } catch (e) { fail(e); }
+  });
+
+cat
+  .command("delete <id>")
+  .description("Delete a cat profile")
+  .action(async (id) => {
+    try {
+      await new Flappie().deleteCat(id);
+      console.log(`cat ${id}: deleted`);
+    } catch (e) { fail(e); }
+  });
+
+const graph = program.command("graph").description("Activity graphs at finer time resolutions");
+
+graph
+  .command("day <date>")
+  .description("Hourly prey-detection graph for a specific day (YYYY-MM-DD)")
+  .action(async (date) => {
+    try {
+      const f = new Flappie();
+      const data = await f.preyStats({ groupBy: "hour", startDate: date, endDate: date });
+      console.log(JSON.stringify(data, null, 2));
+    } catch (e) { fail(e); }
+  });
+
+graph
+  .command("period <granularity>")
+  .description("Prey-detection graph: granularity = day | month")
+  .requiredOption("-s, --start <YYYY-MM-DD>")
+  .requiredOption("-e, --end <YYYY-MM-DD>")
+  .action(async (granularity, opts) => {
+    try {
+      if (!["day", "month"].includes(granularity)) throw new Error("granularity must be day or month");
+      const f = new Flappie();
+      console.log(JSON.stringify(await f.preyStats({ groupBy: granularity, startDate: opts.start, endDate: opts.end }), null, 2));
+    } catch (e) { fail(e); }
+  });
+
+graph
+  .command("hunting-day <date>")
+  .description("Hunting stats for a single day (with hourly prey overlay)")
+  .action(async (date) => {
+    try {
+      const f = new Flappie();
+      const [hunting, prey] = await Promise.all([
+        f.huntingStats({ groupBy: "day", startDate: date }),
+        f.preyStats({ groupBy: "hour", startDate: date, endDate: date }),
+      ]);
+      console.log(JSON.stringify({ hunting, prey }, null, 2));
+    } catch (e) { fail(e); }
+  });
+
 program
   .command("timeplans [device]")
-  .description("List time plans configured on the device")
+  .description("(Deprecated alias) List time plans - use 'flappie timeplan list' instead")
   .action(async (ref) => {
     try {
       const f = new Flappie();
