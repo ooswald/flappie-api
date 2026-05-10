@@ -2,7 +2,9 @@
 
 How the API surface in `API.md` and `openapi.yaml` was recovered from the official Android app. Use this when the vendor ships an app update so we can rerun the same flow instead of starting over.
 
-The whole pipeline runs on a Linux box. iPhone-only? See "Without an Android device" below — we never had one either.
+The whole pipeline runs on a Linux box. iPhone-only? See "Without an Android device" below — we didn't have one either.
+
+All paths below are relative to the repo root unless noted.
 
 ## TL;DR
 
@@ -18,7 +20,7 @@ The whole pipeline runs on a Linux box. iPhone-only? See "Without an Android dev
 
 - Docker (blutter needs gcc ≥ 13, easiest via the `debian:trixie` image)
 - `unzip`
-- `~/src/blutter/run-in-docker.sh` (clone of [worawit/blutter](https://github.com/worawit/blutter) plus a thin docker wrapper — see the "Blutter (Flutter AOT Reverser)" memory or recreate from below)
+- A clone of [worawit/blutter](https://github.com/worawit/blutter) plus a thin docker wrapper script. The wrapper is shown at the end of this doc — set `BLUTTER` below to its path.
 
 ## 1. Get the APK
 
@@ -28,12 +30,13 @@ Flappie is published only on the Play Store. If you don't have an Android device
 - Use a third-party APK mirror (e.g. apkcombo.com) and copy the `.xapk` download link to your Linux box. `.xapk` is a zip-of-apks (the Play Store's split-APK format).
 - `curl -L -o Flappie.xapk '<download URL>'`
 
-The current snapshot was app build **1.0.11**. Always note the build number so we know what we're diffing against next time.
+Note the app build number (the latest snapshot was **1.0.11**) so we know what we're diffing against next time.
 
 ## 2. Unpack the bundle
 
+From the repo root:
+
 ```bash
-cd ~/src/flappie-cli
 mkdir -p xapk-extract && unzip -q -d xapk-extract Flappie.xapk
 
 ls xapk-extract/
@@ -63,28 +66,26 @@ mkdir -p main-extract && unzip -q -d main-extract xapk-extract/com.flappiedoors.
 #   jadx -d ./decompiled --no-imports xapk-extract/com.flappiedoors.apk
 ```
 
-`main-extract/` and `decompiled/` are deliberately gitignored.
+`xapk-extract/`, `arm64-extract/`, `main-extract/`, `decompiled/` and the `.xapk` file itself are all gitignored.
 
 ## 3. Run blutter
 
 Blutter compiles a Dart VM that matches the app's Flutter version, then walks the AOT snapshot to recover class names, method names, string constants and disassembly with symbols.
 
+Set `BLUTTER` to the wrapper script path (see appendix), then:
+
 ```bash
-~/src/blutter/run-in-docker.sh \
-  /home/oli/src/flappie-cli/arm64-extract/lib/arm64-v8a \
-  /home/oli/src/flappie-cli/blutter-out
+"$BLUTTER" "$PWD/arm64-extract/lib/arm64-v8a" "$PWD/blutter-out"
 ```
 
 First run takes ~15 min (Dart SDK fetch + VM build). Subsequent runs reuse the build. If the app upgrades to a newer Flutter, blutter will pick up the new Dart version, fetch and build that instead — same command.
 
-Output (in `blutter-out/`):
+Output (in `blutter-out/`, gitignored):
 
 - `asm/<package>/<file>.dart` — disassembly with symbols, organised the way the original Flutter project's package tree was. **`asm/flappie/api/api_service.dart` is the goldmine.**
 - `pp.txt` — every Dart object pool entry (every string literal, type, etc.)
 - `objs.txt` — nested object dump
 - `blutter_frida.js` — Frida hook template (we don't need it for static recovery)
-
-`blutter-out/` is gitignored.
 
 ## 4. Recover the endpoint surface
 
@@ -203,8 +204,40 @@ The first instinct is "capture HTTPS from the official app and read the requests
 
 - Flappie's mobile app is built with **Flutter**. Flutter uses Dart's `dart:io` `HttpClient`, which **ignores the system HTTPS proxy** on both iOS and Android. So Charles, Proxyman, mitmproxy alone get you nothing.
 - The fix is `reFlutter`, which patches `libflutter.so` to honour the proxy and bypass cert pinning — but reFlutter only works on Android, and you need a real device or emulator running it.
-- We don't have either, and the leu-claude server doesn't support Android emulation.
+- We didn't have a host that supported Android emulation, so going via static analysis was the practical choice.
 
-`blutter` sidesteps all of that — it reads the static AOT snapshot. No device, no traffic capture, no certificates. The trade-off is that it can't show you the *bodies* sent on a specific call; you have to read the Dart source to figure those out. In practice that turned out to be straightforward (see step 4).
+`blutter` sidesteps device requirements entirely — it reads the static AOT snapshot. No device, no traffic capture, no certificates. The trade-off is that it can't show you the *bodies* sent on a specific call; you have to read the Dart source to figure those out. In practice that turned out to be straightforward (see step 4).
 
 If a future app version uses obfuscation that defeats blutter, fall back to: real Android phone (your own or borrowed) + reFlutter + mitmproxy. Blutter's `blutter_frida.js` is a head-start for the Frida side of that flow.
+
+## Appendix — blutter docker wrapper
+
+Drop this next to a clone of [worawit/blutter](https://github.com/worawit/blutter) and `chmod +x` it. Pin `BLUTTER` to its path before running step 3.
+
+```bash
+#!/bin/bash
+# Run blutter against an arm64-v8a lib dir inside Debian trixie.
+# Usage: ./run-in-docker.sh <abs-path-to-arm64-v8a-dir> <abs-path-to-output-dir>
+set -euo pipefail
+
+LIB_DIR="${1:?need arm64-v8a dir}"
+OUT_DIR="${2:?need output dir}"
+mkdir -p "$OUT_DIR"
+
+docker run --rm \
+  -v "$(cd "$(dirname "$0")" && pwd)":/blutter \
+  -v "$LIB_DIR":/lib-in:ro \
+  -v "$OUT_DIR":/out \
+  -w /blutter \
+  debian:trixie \
+  bash -c '
+    set -e
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -y --no-install-recommends \
+      python3-pyelftools python3-requests git cmake ninja-build \
+      build-essential pkg-config libicu-dev libcapstone-dev ca-certificates \
+      >/dev/null
+    python3 blutter.py /lib-in /out
+  '
+```
