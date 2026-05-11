@@ -60,16 +60,16 @@ paths:
     post:
       tags: [auth]
       summary: Trade a refresh token for a new access token
+      description: |
+        The refresh token is sent as a request **header** (`refresh-token: <token>`),
+        not in the JSON body. Sending it as a body field returns a pydantic 422.
       security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [refresh_token]
-              properties:
-                refresh_token: { type: string }
+      parameters:
+        - in: header
+          name: refresh-token
+          required: true
+          schema: { type: string }
+          description: The refresh JWT from a prior login.
       responses:
         "200":
           description: New token pair

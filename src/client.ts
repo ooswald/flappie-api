@@ -153,14 +153,22 @@ export class FlappieClient {
     return data as T;
   }
 
-  /** Try to refresh the access token. Returns true on success. */
+  /**
+   * Try to refresh the access token. Returns true on success.
+   *
+   * The Flappie backend reads the refresh token from the `refresh-token`
+   * HTTP header (not a JSON body) - sending it in the body returns a
+   * pydantic 422 about a missing header field.
+   */
   async tryRefresh(): Promise<boolean> {
     if (!this.auth.refresh_token) return false;
     try {
       const res = await this.fetchFn(`${this.baseUrl}/api/v1/users/refresh`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ refresh_token: this.auth.refresh_token }),
+        headers: {
+          "Accept": "application/json",
+          "refresh-token": this.auth.refresh_token,
+        },
       });
       if (!res.ok) return false;
       const data = (await res.json()) as Partial<TokenPair> & { accessToken?: string; refreshToken?: string };
