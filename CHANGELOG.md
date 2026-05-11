@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented here. The format roughly follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-05-11
+
+Docs-and-DX release: same wire surface as 0.4.0, but the package is meaningfully easier to discover and use.
+
+### Added
+
+- TSDoc on every public `FlappieClient` method — IDE hover and autocomplete now describe what each one does, with usage examples on the load-bearing ones (`patchDeviceSettings`, `listBundles`, `login`).
+- README "Library API reference" section: every method grouped by domain (auth / devices / time plans / cats / bundles / stats / errors) with one-line descriptions.
+- `CHANGELOG.md` and `RE.md` ship in the npm tarball.
+- GitHub repo health: CI workflow (Node 22, `npm ci && build && test`), issue templates (bug / feature) with contact links, PR template.
+
+### Changed
+
+- README leads with `npm install -g flappie-api` (CLI) and `npm install flappie-api` (library). The clone-and-build path moved to a "Develop / contribute" section near the bottom.
+- README's old "API reference" section renamed to "Flappie cloud API (under the hood)" with an explicit "regular users don't need this" callout — separates the *library* surface (what consumers want) from the *cloud HTTP API* (what contributors / alternative-client builders want).
+- `API.md` renamed to `CLOUD_API.md` so the filename itself signals which API it documents.
+- npm-page badges (version, types, license, CI) added to the README.
+
 ## [0.4.0] - 2026-05-10
 
 First public release on npm.
@@ -21,4 +39,5 @@ First public release on npm.
 - `RE.md` reverse-engineering playbook for when the vendor's mobile app updates.
 - Unit tests for pure CLI helpers (`parseBool`, `normalizePolicy`, `parseWeekdays`, `summarizeSettings`).
 
+[0.5.0]: https://github.com/ooswald/flappie-api/releases/tag/v0.5.0
 [0.4.0]: https://github.com/ooswald/flappie-api/releases/tag/v0.4.0
