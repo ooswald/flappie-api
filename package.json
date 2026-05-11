@@ -40,7 +40,7 @@
   "files": [
     "dist/",
     "README.md",
-    "API.md",
+    "CLOUD_API.md",
     "RE.md",
     "openapi.yaml",
     "LICENSE",
