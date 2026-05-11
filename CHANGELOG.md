@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented here. The format roughly follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.1] - 2026-05-11
+
+### Fixed
+
+- **Auto-refresh of the access token now actually works.** The refresh endpoint reads the refresh JWT from a `refresh-token` HTTP header, not a JSON body — sending it as a body returned a pydantic 422 silently swallowed by `tryRefresh()`, which then propagated as an unauthenticated state to the caller. With this fix the CLI / library stays signed in for as long as the refresh token is valid (currently ~30 days), instead of forcing a manual `flappie login` after the ~12-hour access-token expiry.
+
+### Changed
+
+- `CLOUD_API.md` and `openapi.yaml` updated to document the refresh endpoint's actual header-based contract.
+
 ## [0.5.0] - 2026-05-11
 
 Docs-and-DX release: same wire surface as 0.4.0, but the package is meaningfully easier to discover and use.
@@ -39,5 +49,6 @@ First public release on npm.
 - `RE.md` reverse-engineering playbook for when the vendor's mobile app updates.
 - Unit tests for pure CLI helpers (`parseBool`, `normalizePolicy`, `parseWeekdays`, `summarizeSettings`).
 
+[0.5.1]: https://github.com/ooswald/flappie-api/releases/tag/v0.5.1
 [0.5.0]: https://github.com/ooswald/flappie-api/releases/tag/v0.5.0
 [0.4.0]: https://github.com/ooswald/flappie-api/releases/tag/v0.4.0

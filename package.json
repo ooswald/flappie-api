@@ -1,6 +1,6 @@
 {
   "name": "flappie-api",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Control your Flappie cat door from Node or the terminal. Typed TypeScript client with full CRUD for time plans, settings, and prey events. Unofficial, not associated with Flappie Technologies AG.",
   "type": "module",
   "license": "MIT",

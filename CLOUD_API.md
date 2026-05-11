@@ -55,7 +55,7 @@ Do not "fix" this — it matches what the backend actually accepts.
 | Method | Path | Body | CLI |
 |--------|------|------|-----|
 | POST | `/api/v1/users/login` | `{ email, password }` | ✅ `flappie login` |
-| POST | `/api/v1/users/refresh` | `{ refresh_token }` | ✅ (auto on 401) |
+| POST | `/api/v1/users/refresh` | (header `refresh-token: <token>`, no body) | ✅ (auto on 401) |
 | POST | `/api/v1/users/validate-email` | `{ email }` | 🟡 |
 | POST | `/api/v1/users/reset-password` | `{ email }` | 🟡 |
 | POST | `/api/v1/users/reset-password/confirm-code` | `{ email, code }` | 🟡 |
