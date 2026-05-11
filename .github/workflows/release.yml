@@ -1,0 +1,54 @@
+# Auto-publish to npm + create a GitHub Release on every v*-tag push.
+#
+# Requires npm Trusted Publishing to be configured for `flappie-api`:
+#   https://www.npmjs.com/package/flappie-api/access  ->  Trusted Publishers
+#   - GitHub Owner:        ooswald
+#   - Repository:          flappie-api
+#   - Workflow filename:   release.yml
+#   - Environment:         (leave empty)
+#
+# Until that's configured the `npm publish --provenance` step will fail with
+# an OIDC error - the rest of the workflow (checkout, build, test) will still
+# run on the tag push.
+#
+# Trigger: push a tag like `v0.6.0`. Typical flow:
+#   npm version minor   # bumps package.json + creates the tag locally
+#   git push origin main
+#   git push origin v0.6.0
+# (or push from github remote - both work, the tag is what triggers this)
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  id-token: write       # required by npm OIDC trusted publishing
+  contents: write       # required to create the GitHub Release
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org"
+
+      - run: npm ci
+      - run: npm test
+      - run: npm publish --provenance --access=public
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
