@@ -100,6 +100,84 @@ Token refresh against an arbitrary backend host:
 new FlappieClient({ baseUrl: "https://my-proxy.example.com", auth });
 ```
 
+## Library API reference
+
+Every method below is exported on `FlappieClient`. All return promises; arguments and return shapes are fully typed via the bundled `.d.ts` files (your IDE will autocomplete and show TSDoc descriptions on hover). The underlying HTTP endpoints are documented separately in [`CLOUD_API.md`](./CLOUD_API.md) — you only need that doc if you're wrapping a new endpoint or building an alternative client.
+
+### Auth
+
+| Method | Description |
+|--------|-------------|
+| `login(email, password)` | Exchange credentials for a token pair and persist via `onAuthChange`. |
+| `logout()` | Clear the token pair. |
+| `tryRefresh()` | Manually refresh the access token. Normally invoked automatically on 401. |
+| `getUser()` | Current user profile. |
+| `isAuthenticated` (getter) | `true` if an access token is set. |
+| `authState` (getter) | Read-only snapshot of `{ email, access_token, refresh_token }`. |
+
+### Devices
+
+| Method | Description |
+|--------|-------------|
+| `listDevices()` | All cat doors on the account. |
+| `getDeviceInformation(id)` | Model, firmware, AI model version. |
+| `getDeviceStatus(id)` | Realtime state: `unlocked` \| `locked`, lock-until timestamps. |
+| `getDeviceSettings(id)` | Door policy, AI / button preferences, prey-timed-lock config, active plan. |
+| `patchDeviceSettings(id, patch)` | Update one or more settings fields; returns the full updated object. |
+| `setDoorPolicy(id, "OPEN" \| "CLOSED" \| "OPEN_IN" \| "OPEN_OUT")` | Shortcut for `patchDeviceSettings({ open_status })`. |
+| `lock(id)` | `setDoorPolicy(id, "CLOSED")`. |
+| `unlock(id)` | `setDoorPolicy(id, "OPEN")`. |
+| `updateDeviceName(id, name)` | Rename a device. |
+
+### Time plans (schedule)
+
+| Method | Description |
+|--------|-------------|
+| `getDeviceTimePlans(deviceId)` | Current schedule entries. |
+| `addDeviceTimePlan(deviceId, plan)` | Add a new entry (all fields required — see `TimePlanRequest`). |
+| `editDeviceTimePlan(deviceId, tpId, plan)` | Full replace of an existing entry. |
+| `deleteDeviceTimePlan(deviceId, tpId)` | Remove an entry. |
+
+### Cats
+
+| Method | Description |
+|--------|-------------|
+| `listCats()` | Cat profiles on the account. |
+| `addCat(body)` | Create a profile (only `name` is required). |
+| `editCat(id, body)` | Replace a profile. |
+| `deleteCat(id)` | Delete a profile. |
+| `catBreeds()` | Lookup table for the `breed` field. |
+
+### Bundles (prey / activity events)
+
+| Method | Description |
+|--------|-------------|
+| `listBundles({ page?, from?, to?, order? })` | Paginated event list with optional `createdAt` date filter and direction. |
+| `getBundle(id)` | One event with fresh signed media URLs. |
+
+### Statistics + dashboard
+
+| Method | Description |
+|--------|-------------|
+| `huntingStats({ groupBy?, startDate?, endDate? })` | Hunting stats with household / community comparison. |
+| `preyStats({ groupBy?, startDate?, endDate? })` | Prey-detection time series. Use `groupBy: "hour"` for intra-day. |
+| `dashboard()` | Aggregated home-screen payload (operational status, banners, recent prey). |
+| `news()` | In-app news feed. |
+
+### Escape hatch
+
+| Method | Description |
+|--------|-------------|
+| `request(method, path, { body?, query?, auth? })` | Call any endpoint the library hasn't wrapped. Handles auth + refresh automatically. |
+
+### Errors
+
+All API errors throw `FlappieApiError` with:
+
+- `status: number` — HTTP status code
+- `body: unknown` — parsed JSON error body (or raw string fallback)
+- `message: string` — human-readable summary, e.g. `"PATCH /api/v1/devices<id>/settings -> 422: ..."`
+
 ## Use the CLI
 
 ### Account, devices, status
@@ -197,11 +275,17 @@ FLAPPIE_CONFIG=/path/to/file flappie ...
 FLAPPIE_API=https://my-proxy.example.com flappie ...
 ```
 
-## API reference
+## Flappie cloud API (under the hood)
 
-`API.md` documents every known endpoint, with a CLI-status flag (`✅` wired up, `🟡` known but unwrapped, `🔒` deliberately unimplemented). `openapi.yaml` is the same surface in a machine-readable form (load it into Swagger UI, generate clients, etc).
+> This section is for contributors and developers building their own client. **Regular users of the library/CLI don't need to read it** — use the [Library API reference](#library-api-reference) instead.
 
-The `DoorPolicy` enum used by `open_status` and the `--policy` flag:
+The Flappie mobile app talks to an undocumented HTTP API at `https://app.flappiedoors.com`. This package wraps it, but the raw endpoint surface is also documented here:
+
+- [`CLOUD_API.md`](./CLOUD_API.md) — every known endpoint with a status flag (`✅` wrapped, `🟡` not wrapped yet, `🔒` deliberately not wrapped), request/response shapes, and gotchas.
+- [`openapi.yaml`](./openapi.yaml) — the same surface as a machine-readable OpenAPI 3.1 spec. Load it into Swagger UI / Stoplight / your code generator of choice.
+- [`RE.md`](./RE.md) — how the API was reverse-engineered from the official Android app. Use this when a new app version changes the surface.
+
+The `DoorPolicy` enum used by `open_status` and the CLI `--policy` flag:
 
 | value      | meaning                              |
 |------------|--------------------------------------|
@@ -210,11 +294,11 @@ The `DoorPolicy` enum used by `open_status` and the `--policy` flag:
 | `OPEN_IN`  | only inbound (keep cat inside)       |
 | `OPEN_OUT` | only outbound (keep cat outside)     |
 
-> Slash quirk: `/settings` and the bare device PATCH expect **no** slash between `/api/v1/devices` and the id, while `/information`, `/timeplans`, `/status` do. The CLI handles both forms internally; only matters if you write your own client or use `flappie raw`.
+> Slash quirk: `/settings` and the bare device PATCH expect **no** slash between `/api/v1/devices` and the id, while `/information`, `/timeplans`, `/status` do. The library handles both forms internally; only matters if you write your own client or use `flappie raw`.
 
 ## Not yet implemented (PRs welcome)
 
-These are documented in `API.md` and `openapi.yaml` but not (yet) wrapped in CLI commands. If you're building an alternative client — a web app, a Home Assistant integration, a voice-assistant skill — these are the gaps:
+These are documented in `CLOUD_API.md` and `openapi.yaml` but not (yet) wrapped in the library or CLI. If you're building an alternative client — a web app, a Home Assistant integration, a voice-assistant skill — these are the gaps:
 
 - **Notifications**: `mark <id> read`, `mark-all-read`. Trivial PATCH calls.
 - **AI training preference, language, marketing-email opt-in**: all `PATCH /api/v1/users` with different body fields.

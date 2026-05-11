@@ -1,6 +1,6 @@
 # Reverse-engineering the Flappie API
 
-How the API surface in `API.md` and `openapi.yaml` was recovered from the official Android app. Use this when the vendor ships an app update so we can rerun the same flow instead of starting over.
+How the API surface in `CLOUD_API.md` and `openapi.yaml` was recovered from the official Android app. Use this when the vendor ships an app update so we can rerun the same flow instead of starting over.
 
 The whole pipeline runs on a Linux box. iPhone-only? See "Without an Android device" below — we didn't have one either.
 
@@ -188,14 +188,14 @@ node dist/cli.js raw PATCH '/api/v1/<path>' -d '{"<field>":"<value>"}'
 
 422 errors are friendly — pydantic on the backend will tell you exactly which fields are missing and what types they want. The CLI's `flappie raw` dumps the full error body.
 
-## 6. Update API.md, openapi.yaml, the typed client
+## 6. Update CLOUD_API.md, openapi.yaml, the typed client
 
 When the surface changes:
 
 1. Diff the awk output above against the previous snapshot. New rows = new endpoints; removed rows = retired endpoints; changed `paths` = slash quirks shifting.
 2. Regenerate the per-method body field lists for any new model files.
 3. Edit `src/types.ts` first (single source of truth for shapes), then surface the new methods in `src/client.ts`, then add CLI bindings in `src/cli.ts` if useful.
-4. Mirror the changes in `API.md` (human-readable) and `openapi.yaml` (machine-readable).
+4. Mirror the changes in `CLOUD_API.md` (human-readable) and `openapi.yaml` (machine-readable).
 5. Run `npm run build` and spot-test the live calls.
 
 ## Without an Android device — why blutter?
