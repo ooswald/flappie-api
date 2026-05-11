@@ -41,8 +41,10 @@
     "dist/",
     "README.md",
     "API.md",
+    "RE.md",
     "openapi.yaml",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsc",

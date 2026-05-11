@@ -1,5 +1,10 @@
 # flappie-api
 
+[![npm version](https://img.shields.io/npm/v/flappie-api.svg)](https://www.npmjs.com/package/flappie-api)
+[![types](https://img.shields.io/npm/types/flappie-api.svg)](https://www.npmjs.com/package/flappie-api)
+[![license](https://img.shields.io/npm/l/flappie-api.svg)](./LICENSE)
+[![CI](https://github.com/ooswald/flappie-api/actions/workflows/ci.yml/badge.svg)](https://github.com/ooswald/flappie-api/actions/workflows/ci.yml)
+
 > **Control your Flappie cat door from Node or the terminal.** Typed TypeScript client with full CRUD for time plans, settings, and prey events. Unofficial, not associated with Flappie Technologies AG.
 
 A typed Node.js client + CLI for [Flappie](https://flappiedoors.com) cat doors. It talks to the cloud API at `app.flappiedoors.com` — the same one the mobile app uses — and lets you script lock / unlock, policy changes, time plans, prey-detection events, stats and dashboard reads from a terminal, a home-automation system, or your own Node app.
@@ -10,36 +15,32 @@ This repository was entirely made by Claude Code and will be maintained by it. I
 >
 > There is no documented local control: the door talks only to the cloud, and so does this client. Anything you can do via the official app should be doable here, plus a few raw escape hatches.
 
-## Status
-
-**v0.4 — typed library + CLI from a single TypeScript source.** Login, devices, dashboard, stats with finer time resolution, news, lock / unlock, door policy, AI toggle, buttons, rename, full **time-plan CRUD**, **bundles** (prey/activity events with media URLs), and **cat-profile CRUD**. See `API.md` for the complete endpoint reference and `openapi.yaml` for a machine-readable spec.
-
 ## Install
 
-As a CLI (globally):
+**As a CLI** (globally on your PATH):
 
 ```bash
-git clone <this-repo> flappie-api
-cd flappie-api
-npm install                          # also runs `npm run build`
-npm link                             # puts `flappie` on your PATH
-# or:  ln -sf "$(pwd)/dist/cli.js" ~/.local/bin/flappie
+npm install -g flappie-api
+flappie login -e you@example.com
+flappie devices
 ```
 
-As a library (in your own Node project, once published to npm):
+**As a library** in your own Node.js project:
 
 ```bash
 npm install flappie-api
 ```
 
-Requires Node.js 18+ (for global `fetch`); the test runner uses Node's built-in TypeScript stripping (Node ≥ 22.6).
+```ts
+import { FlappieClient } from "flappie-api";
 
-## Develop
-
-```bash
-npm run build      # tsc -> dist/
-npm test           # unit tests for the pure CLI helpers (node:test)
+const flappie = new FlappieClient();
+await flappie.login("you@example.com", process.env.FLAPPIE_PASSWORD!);
+const devices = await flappie.listDevices();
+await flappie.lock(devices[0].id);
 ```
+
+Requires Node.js ≥ 18 (for global `fetch`).
 
 ## Use as a library
 
@@ -99,7 +100,7 @@ Token refresh against an arbitrary backend host:
 new FlappieClient({ baseUrl: "https://my-proxy.example.com", auth });
 ```
 
-## Use
+## Use the CLI
 
 ### Account, devices, status
 
@@ -231,6 +232,18 @@ Deliberately not wrapped:
 - `DELETE /api/v1/users` — irreversible account deletion. Foot-gun in a CLI.
 - `POST /api/v1/devices/assign` / `DELETE /api/v1/devices/unassign` — device pairing belongs in the onboarding flow, not a maintenance CLI.
 - `POST /api/v1/users/fcm-token` — Firebase push tokens are useful only inside an actual push-receiving mobile app.
+
+## Develop / contribute
+
+```bash
+git clone https://github.com/ooswald/flappie-api.git
+cd flappie-api
+npm install            # also builds dist/ via the prepare script
+npm test               # unit tests for the pure CLI helpers (node:test)
+npm run build          # tsc -> dist/
+```
+
+Issues and PRs welcome. Bug reports + feature requests go through the [issue templates](https://github.com/ooswald/flappie-api/issues/new/choose); see `CHANGELOG.md` for version history and `RE.md` for how the API was reverse-engineered (useful if the vendor ships an app update and endpoints drift).
 
 ## Notes
 
