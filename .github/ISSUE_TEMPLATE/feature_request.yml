@@ -22,7 +22,7 @@ body:
     attributes:
       label: Is this already in the API surface?
       description: |
-        Check `API.md` - endpoints we know about but haven't wrapped yet are
+        Check `CLOUD_API.md` - endpoints we know about but haven't wrapped yet are
         marked 🟡. If yours is one of them, link to that row. If it's a new
         endpoint we'd have to discover, mention that too.
 

@@ -17,7 +17,7 @@ First public release on npm.
 - Bundles (prey/activity events): paginated list with date filters + single fetch.
 - Statistics + dashboard.
 - CLI commands for all of the above plus `raw <method> <path>` for unwrapped endpoints.
-- `API.md` and `openapi.yaml` reference docs.
+- `CLOUD_API.md` and `openapi.yaml` reference docs.
 - `RE.md` reverse-engineering playbook for when the vendor's mobile app updates.
 - Unit tests for pure CLI helpers (`parseBool`, `normalizePolicy`, `parseWeekdays`, `summarizeSettings`).
 
