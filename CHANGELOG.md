@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented here. The format roughly follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-05-14
+
+### Added
+
+- `listBundles` accepts the same server-side filters the official mobile app's filter sheet exposes:
+  - `onlyPrey` — only prey / only non-prey events
+  - `isViewed` — only viewed / only unviewed bundles
+  - `onlyNew` — only never-seen bundles
+  - `onlyUnsaved` — only bundles not in a collection
+  Previously callers had to paginate through every page and filter client-side; now one roundtrip suffices.
+- CLI: `flappie bundles list` gains `--prey <true|false>`, `--viewed <true|false>`, `--new`, `--unsaved`.
+- The request also sends `sort_order=` alongside `order_direction=` (the app sends both spellings).
+
+### Changed
+
+- `RequestOptions.query` accepts `boolean` values; they are stringified to `"true"`/`"false"` when serialised.
+- `CLOUD_API.md` and `openapi.yaml` document the new query parameters.
+
+### Internal
+
+- These params live as raw `&xyz=` literals inside `api_service.dart::getBundlesPage` in the AOT snapshot and were missed by the original RE sweep (which scanned URL literals, not query fragments). `RE.md`'s "spot-check live" step is the right place to catch this kind of thing next time.
+
 ## [0.5.1] - 2026-05-11
 
 ### Fixed
