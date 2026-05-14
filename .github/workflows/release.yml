@@ -1,21 +1,22 @@
-# Auto-publish to npm + create a GitHub Release on every v*-tag push.
+# Create a GitHub Release whenever a v*-tag is pushed.
 #
-# Requires npm Trusted Publishing to be configured for `flappie-api`:
-#   https://www.npmjs.com/package/flappie-api/access  ->  Trusted Publishers
-#   - GitHub Owner:        ooswald
-#   - Repository:          flappie-api
-#   - Workflow filename:   release.yml
-#   - Environment:         (leave empty)
+# Publishing to npm is deliberately NOT part of this workflow: it requires
+# 2FA, which is done interactively from the maintainer's machine. Typical flow:
 #
-# Until that's configured the `npm publish --provenance` step will fail with
-# an OIDC error - the rest of the workflow (checkout, build, test) will still
-# run on the tag push.
+#   1. Bump version + tag locally:
+#        npm version minor              # writes package.json, commits, tags
+#        git push origin main           # GitLab (source of truth)
+#        git push github HEAD:main      # GitHub (via PR/squash; this push is
+#                                       #         only for tags, see step 2)
+#        git push github vX.Y.Z         # triggers this workflow -> Release
 #
-# Trigger: push a tag like `v0.6.0`. Typical flow:
-#   npm version minor   # bumps package.json + creates the tag locally
-#   git push origin main
-#   git push origin v0.6.0
-# (or push from github remote - both work, the tag is what triggers this)
+#   2. Publish to npm by hand, in a 2FA-capable terminal:
+#        npm login                      # browser passkey flow
+#        npm publish                    # uses the same vX.Y.Z tag
+#
+# The workflow runs CI (build + test) on the tagged commit and, if green,
+# creates the GitHub Release with auto-generated notes from PRs since the
+# previous tag.
 
 name: Release
 
@@ -25,18 +26,19 @@ on:
       - "v*"
 
 permissions:
-  id-token: write
-  contents: write
+  contents: write       # required to create the GitHub Release
 
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 0     # full history so release notes can diff against the previous tag
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
@@ -45,7 +47,6 @@ jobs:
 
       - run: npm ci
       - run: npm test
-      - run: npm publish --provenance --access=public
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
