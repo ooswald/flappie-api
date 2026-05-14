@@ -161,6 +161,14 @@ export interface ListBundlesOptions {
   /** ISO date or datetime; filters records by `createdAt` <= to */
   to?: string;
   order?: "asc" | "desc";
+  /** Only prey events when true; only non-prey when false. Omit for both. */
+  onlyPrey?: boolean;
+  /** Only viewed bundles when true; only unviewed when false. Omit for both. */
+  isViewed?: boolean;
+  /** Only never-seen bundles (mirrors the "Neu" filter in the app). */
+  onlyNew?: boolean;
+  /** Only bundles that have not been saved to a collection. */
+  onlyUnsaved?: boolean;
 }
 
 export interface OperationalStatus {

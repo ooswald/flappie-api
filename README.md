@@ -152,7 +152,7 @@ Every method below is exported on `FlappieClient`. All return promises; argument
 
 | Method | Description |
 |--------|-------------|
-| `listBundles({ page?, from?, to?, order? })` | Paginated event list with optional `createdAt` date filter and direction. |
+| `listBundles({ page?, from?, to?, order?, onlyPrey?, isViewed?, onlyNew?, onlyUnsaved? })` | Paginated event list. Server-side filters mirror the official app filter sheet: `onlyPrey`/`isViewed`/`onlyNew`/`onlyUnsaved`. |
 | `getBundle(id)` | One event with fresh signed media URLs. |
 
 ### Statistics + dashboard

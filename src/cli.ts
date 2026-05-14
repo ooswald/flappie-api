@@ -326,12 +326,29 @@ bundles
   .option("-f, --from <YYYY-MM-DD>", "filter: from this date")
   .option("-t, --to <YYYY-MM-DD>", "filter: up to this date")
   .option("-o, --order <asc|desc>", "createdAt sort direction", "desc")
-  .action(wrap(async (opts: { page: string; from?: string; to?: string; order?: "asc" | "desc" }) => {
+  .option("--prey <true|false>", "filter: only prey (true) or only non-prey (false)")
+  .option("--viewed <true|false>", "filter: only viewed / unviewed")
+  .option("--new", "filter: only never-seen bundles")
+  .option("--unsaved", "filter: only bundles not in a collection")
+  .action(wrap(async (opts: {
+    page: string;
+    from?: string;
+    to?: string;
+    order?: "asc" | "desc";
+    prey?: string;
+    viewed?: string;
+    new?: boolean;
+    unsaved?: boolean;
+  }) => {
     const data = await client().listBundles({
       page: Number(opts.page),
       from: opts.from,
       to: opts.to,
       order: opts.order ?? "desc",
+      onlyPrey: opts.prey === undefined ? undefined : parseBool(opts.prey),
+      isViewed: opts.viewed === undefined ? undefined : parseBool(opts.viewed),
+      onlyNew: opts.new ? true : undefined,
+      onlyUnsaved: opts.unsaved ? true : undefined,
     });
     console.log(JSON.stringify(data, null, 2));
   }));

@@ -525,8 +525,13 @@ paths:
         - { in: query, name: page, schema: { type: integer, default: 1 } }
         - { in: query, name: order_by, schema: { type: string, enum: [createdAt] } }
         - { in: query, name: order_direction, schema: { type: string, enum: [asc, desc], default: desc } }
+        - { in: query, name: sort_order, schema: { type: string, enum: [asc, desc] }, description: "Alternate name for order_direction sent by the mobile app." }
         - { in: query, name: fromCreatedAt, schema: { type: string, format: date-time } }
         - { in: query, name: toCreatedAt, schema: { type: string, format: date-time } }
+        - { in: query, name: only_prey, schema: { type: boolean }, description: "Only is_prey=true when true; only is_prey=false when false." }
+        - { in: query, name: is_viewed, schema: { type: boolean }, description: "Only viewed bundles when true; only unviewed when false." }
+        - { in: query, name: only_new, schema: { type: boolean }, description: "Only never-seen bundles." }
+        - { in: query, name: only_unsaved, schema: { type: boolean }, description: "Only bundles not in a collection." }
       responses:
         "200":
           description: OK

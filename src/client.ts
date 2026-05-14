@@ -46,7 +46,7 @@ export interface FlappieClientOptions {
 
 interface RequestOptions {
   body?: unknown;
-  query?: Record<string, string | number | undefined>;
+  query?: Record<string, string | number | boolean | undefined>;
   auth?: boolean;
   /** Internal: prevent infinite refresh loops. */
   retried?: boolean;
@@ -373,14 +373,19 @@ export class FlappieClient {
    * ```
    */
   listBundles(opts: ListBundlesOptions = {}): Promise<BundlesPage> {
-    const { page = 1, from, to, order = "desc" } = opts;
+    const { page = 1, from, to, order = "desc", onlyPrey, isViewed, onlyNew, onlyUnsaved } = opts;
     return this.request<BundlesPage>("GET", "/api/v1/bundles", {
       query: {
         page,
         order_by: "createdAt",
         order_direction: order,
+        sort_order: order,
         fromCreatedAt: from,
         toCreatedAt: to,
+        only_prey: onlyPrey,
+        is_viewed: isViewed,
+        only_new: onlyNew,
+        only_unsaved: onlyUnsaved,
       },
     });
   }

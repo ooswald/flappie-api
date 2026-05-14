@@ -164,7 +164,7 @@ A bundle is a single visit/event detected by the door, with photos and an option
 
 | Method | Path | Query | CLI |
 |--------|------|-------|-----|
-| GET | `/api/v1/bundles` | `page`, `order_by=createdAt`, `order_direction=asc\|desc`, `fromCreatedAt`, `toCreatedAt` | ✅ `flappie bundles list` |
+| GET | `/api/v1/bundles` | `page`, `order_by=createdAt`, `order_direction=asc\|desc` / `sort_order=asc\|desc`, `fromCreatedAt`, `toCreatedAt`, `only_prey=true\|false`, `is_viewed=true\|false`, `only_new=true\|false`, `only_unsaved=true\|false` | ✅ `flappie bundles list` |
 | GET | `/api/v1/bundles/<id>` | — | ✅ `flappie bundles show` |
 | PATCH | `/api/v1/bundles/<id>/mark-as-view` | — | 🟡 |
 | DELETE | `/api/v1/bundles/<id>` | — | 🟡 |
