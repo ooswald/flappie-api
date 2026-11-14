@@ -196,10 +196,10 @@ program
   }));
 
 program
-  .command("power-off-policy <policy> [device]")
-  .description(`Door policy when battery dies: ${POLICIES.join(" | ")}`)
-  .action(wrap(async (policy: string, ref?: string) => {
-    const power_off_open_status = normalizePolicy(policy);
+  .command("power-off-policy <state> [device]")
+  .description("Set power-off behavior (on/off)")
+  .action(wrap(async (state: string, ref?: string) => {
+    const power_off_open_status = parseBool(state);
     const c = client();
     const d = resolveDevice(await c.listDevices(), ref);
     const updated = await c.patchDeviceSettings(d.id, { power_off_open_status });

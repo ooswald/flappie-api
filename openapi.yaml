@@ -982,13 +982,7 @@ components:
         id: { type: integer }
         catflap_id: { type: string }
         open_status: { $ref: "#/components/schemas/DoorPolicy" }
-        power_off_open_status:
-          oneOf:
-            - { $ref: "#/components/schemas/DoorPolicy" }
-            - { type: boolean }
-          description: |
-            Stored as a boolean on the backend in the GET response, but PATCH
-            accepts a `DoorPolicy` value too — likely a backend leftover.
+        power_off_open_status: { type: boolean }
         buttons_enabled: { type: boolean }
         rfid: { type: boolean }
         prey_detection: { type: boolean }
@@ -1004,7 +998,7 @@ components:
       type: object
       properties:
         open_status: { $ref: "#/components/schemas/DoorPolicy" }
-        power_off_open_status: { $ref: "#/components/schemas/DoorPolicy" }
+        power_off_open_status: { type: boolean }
         buttons_enabled: { type: boolean }
         prey_detection_user_preference: { type: boolean }
         prey_timed_lock_enabled: { type: boolean }

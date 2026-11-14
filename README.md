@@ -209,7 +209,7 @@ flappie policy OPEN_IN             # one-way: only entry (keep cat inside)
 flappie policy OPEN_OUT            # one-way: only exit (keep cat outside)
 flappie ai on                      # enable prey-detection AI
 flappie buttons off                # disable physical buttons on the door
-flappie power-off-policy CLOSED    # what the door does when battery dies
+flappie power-off-policy off       # power-off setting (on/off)
 flappie set-name "Garden Door"     # rename the device
 ```
 

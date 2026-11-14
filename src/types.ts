@@ -61,11 +61,7 @@ export interface DeviceSettings {
   id: number;
   catflap_id: string;
   open_status: DoorPolicy;
-  /**
-   * Reads back as a boolean from the GET endpoint, but PATCH accepts a
-   * `DoorPolicy` value. Likely a backend leftover.
-   */
-  power_off_open_status: DoorPolicy | boolean;
+  power_off_open_status: boolean;
   buttons_enabled: boolean;
   rfid: boolean;
   prey_detection: boolean;
@@ -82,7 +78,7 @@ export interface DeviceSettings {
 
 export interface DeviceSettingsPatch {
   open_status?: DoorPolicy;
-  power_off_open_status?: DoorPolicy | boolean;
+  power_off_open_status?: boolean;
   buttons_enabled?: boolean;
   prey_detection_user_preference?: boolean;
   prey_timed_lock_enabled?: boolean;

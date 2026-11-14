@@ -37,7 +37,7 @@ Do not "fix" this — it matches what the backend actually accepts.
 
 ### Common enums
 
-`DoorPolicy` (used as `open_status`, sometimes `power_off_open_status`):
+`DoorPolicy` (used as `open_status`):
 
 | value      | meaning                              |
 |------------|--------------------------------------|
@@ -116,7 +116,7 @@ Settings response shape (live):
 }
 ```
 
-`PATCH /settings` returns the updated settings object (use it in lieu of a follow-up GET).
+`power_off_open_status` is a boolean; setting it to `true` or `false` via `PATCH /settings` has been verified. `PATCH /settings` returns the updated settings object (use it in lieu of a follow-up GET).
 
 ## Time plans
 
